@@ -2,7 +2,7 @@ package pieces;
 
 import org.newdawn.slick.Color;
 
-import point.Point;
+import point.*;
 import pieces.GameBoardSquare.MoveType;
 import logic.GameBoard;
 import logic.GameBoard.PieceType;
@@ -10,6 +10,7 @@ import logic.GameBoard.PieceType;
 public class ActivePiece {
 	
 	//Maybe have an array of GameBoardSquare? Makes more sense...
+	//Or, at least used collections instead of naked arrays.
 	private Point[] piece;
 	private GameBoard theBoard;
 	private Color color;
@@ -69,14 +70,14 @@ public class ActivePiece {
 		}
 		
 		for (int i=0; i<4; ++i)
-			this.piece[i].setPoint(piece[i].x, piece[i].y);
+			this.piece[i].set(piece[i].x, piece[i].y);
 		
 		return true;
 	}
 	public void unsetPiece() {
 		for (int i=0; i<4; ++i) {
 			theBoard.unsetSquare(piece[i].x, piece[i].y);
-			piece[i].setPoint(-1, -1);
+			piece[i].set(-1, -1);
 		}
 	}
 	/**
@@ -105,19 +106,20 @@ public class ActivePiece {
 	 * Checks to see if the move is possible without a collision. It is necessary to call this function
 	 * before calling move().
 	 * @param type - An enum of type moveType. Possible values are MOVE_DOWN, MOVE_RIGHT, and MOVE_LEFT.
+	 * @param numUnits - The number of units to move the piece.
 	 * @return Indicates whether the move is possible without a collision.
 	 */
-	private boolean checkMove(MoveType type) {
+	private boolean checkMove(MoveType type, int numUnits) {
 		Point moveVector = new Point();
 		switch (type) {
 		case MOVE_DOWN:
-			moveVector.setPoint(1, 0);
+			moveVector.set(numUnits, 0);
 			break;
 		case MOVE_LEFT:
-			moveVector.setPoint(0, -1);
+			moveVector.set(0, -numUnits);
 			break;
 		case MOVE_RIGHT:
-			moveVector.setPoint(0, 1);
+			moveVector.set(0, numUnits);
 			break;
 		}
 		
@@ -146,35 +148,39 @@ public class ActivePiece {
 	/**
 	 * Moves the active Tetris piece being controlled by input.
 	 * @param type - An enum of type moveType. Possible values are MOVE_DOWN, MOVE_RIGHT, and MOVE_LEFT.
+	 * @param numUnits - The number of units to move the piece.
 	 * @return Returns a value in the enum collisionType. Possible values are COL_SIDE,
 	 * COL_BOTTOM, and COL_NONE.
 	 */
-	public CollisionType move(MoveType type) {
+	public CollisionType move(MoveType type, int numUnits) {
+		
+		numUnits = Math.abs(numUnits);
+		
 		switch (type) {
 		
 		case MOVE_DOWN:
 			
 			//Make sure we can move it down without hitting anything
-			if (!checkMove(type))
+			if (!checkMove(type, numUnits))
 				return CollisionType.COL_BOTTOM;
 			
-			translate(1,0);
+			translate(numUnits,0);
 			break;
 			
 			
 		case MOVE_LEFT:										//MOVE_LEFT and MOVE_RIGHT
-			if (!checkMove(type))
+			if (!checkMove(type, numUnits))
 				return CollisionType.COL_SIDE;
 			
-			translate(0,-1);
+			translate(0,-numUnits);
 			break;
 			
 			
 		case MOVE_RIGHT:
-			if (!checkMove(type))
+			if (!checkMove(type, numUnits))
 				return CollisionType.COL_SIDE;
 			
-			translate(0,1);
+			translate(0,numUnits);
 		}
 		
 		return CollisionType.COL_NONE;
@@ -188,32 +194,94 @@ public class ActivePiece {
 	 * 4) Add an animation for row deletion. Also, add the row deletion.
 	 * */
 	
-	//TODO  Do shit
-	public void rotate() {
+	private void kick(CollisionType type, Point[] piece, int kickAmount) {
 		
-		//"Pivot" is the center square of the Tetris piece.
-		//In order to rotate, we translate the piece's center (the pivot square) to the origin.
+		switch(type) {
+			
+		case COL_SIDE:
+			
+			
+		}
+	}
+	public void rotate(boolean leftRotate) {
+		
+		if (type == PieceType.PIECE_SQUARE)
+			return;
+		 
+		//"Pivot" is subsquare that the tetris piece rotates about. The pivot is always the first point.
+		//In order to rotate, we translate the pivot's center to the origin.
+		//The origin is at the top-left of the game board.
+		
 		Point pivot          = new Point(piece[0]);
-		Point originVec      = new Point(-pivot.x, -pivot.y);
+		Vec2D originVec      = new Vec2D(-pivot.x, -pivot.y);
 		Point[] rotatedPoint = new Point[4];
 		for (int i=0; i<4; ++i)
 			rotatedPoint[i] = new Point(piece[i]);
 		
-		//Rotate the piece
+		//Rotate the piece (rotate each subsquare about the pivot)
+		//See if the rotation causes a piece to go out of bounds.
+		CollisionType col = CollisionType.COL_NONE;
+		Point mostOutstandingSubsquare = new Point(); //Keep track of the subsquare that's the farthest out of bounds.
 		for (int i=0; i<4; ++i) {
 			rotatedPoint[i].x += originVec.x;       //Translate piece so it's centered on origin.
 			rotatedPoint[i].y += originVec.y;
 			int temp           = rotatedPoint[i].x; //Rotate the piece
-			rotatedPoint[i].x  = rotatedPoint[i].y;
-			rotatedPoint[i].y  = -temp;
+			if (leftRotate) {
+				rotatedPoint[i].x  = -rotatedPoint[i].y;
+				rotatedPoint[i].y  = temp;
+			}
+			else {
+				rotatedPoint[i].x = rotatedPoint[i].y;
+				rotatedPoint[i].y = -temp;
+			}
 			rotatedPoint[i].x += -originVec.x;	    //Translate piece back to original position.
 			rotatedPoint[i].y += -originVec.y;
+			
+			
+			
+			//Check if the rotated subsquare is out of bounds so we can "kick" it back in later.
+			//We have to use our own custom out of bounds code, because we need to know which side the
+			//piece is out of bounds on.
+			//
+			//The whole piece can't be out of bounds on two sides at once.
+			//
+			//We keep track of the "most outstanding subsquare," because, for instance, if the subsquare
+			//is 2 units out of bounds on the right, then we want to "kick" the whole shape back to the 
+			//left by 2 units.
+			
+			
+			//If the subsquare is to the left of the board....
+			if (rotatedPoint[i].y < 0) {//the y component corresponds to the column (confusing!)
+				System.out.println("Subsquare is to the left of the board");
+				col = CollisionType.COL_SIDE;
+				if (rotatedPoint[i].y  < mostOutstandingSubsquare.y)
+					mostOutstandingSubsquare.set(rotatedPoint[i]);
+			}
+			
+			//If the subsquare is to the right of the board...
+			else if (rotatedPoint[i].y >= theBoard.getCols()) {
+				System.out.println("Subsquare is to the right of the board");
+				col = CollisionType.COL_SIDE;
+				if (rotatedPoint[i].y > mostOutstandingSubsquare.y)
+					mostOutstandingSubsquare.set(rotatedPoint[i]);
+			}
+			
+			//If the subsquare is under the board
+			else if (rotatedPoint[i].x >= theBoard.getRows()) {
+				System.out.println("Subsquare is under the board!");
+				col = CollisionType.COL_BOTTOM;
+				if (rotatedPoint[i].x > mostOutstandingSubsquare.x)
+					mostOutstandingSubsquare.set(rotatedPoint[i]);
+			}
 		}
+		
+		//If the piece was rotated out of bounds, do the kicking.
+		//switch (col)
 		unsetPiece();
 		setPiece(rotatedPoint, this.type);
 	}
 	
 	public void dropPiece() {
-		//Do stuff
+		while (move(MoveType.MOVE_DOWN, 1) != CollisionType.COL_BOTTOM);
 	}
 }

@@ -16,12 +16,18 @@ public class Point {
 	}
 	
 	public Point(Point point) {
-		setPoint(point.x, point.y);
+		set(point.x, point.y);
 	}
 	
-	public void setPoint(int x, int y) {
+	public void set(int x, int y) {
 		this.x = x;
 		this.y = y;
 	}
-
+	
+	public void set(Point p) {
+		if (p != null) {
+			this.x = p.x;
+			this.y = p.y;
+		}
+	}
 }
