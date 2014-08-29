@@ -92,6 +92,21 @@ public class GameBoard {
 
 	
 	
+	
+	public boolean checkCollision(Point[] piece) {
+		for (int i = 0; i < 4; ++i) {
+			if (!inBounds(piece[i].x, piece[i].y))
+				return true;
+			else
+				if (isSet(piece[i].x, piece[i].y))
+					return true;
+		}
+		return false;
+	}
+	
+	
+	
+	
 	public boolean inBounds(int row, int col) {
 		if (row < 0 || row >= this.rows)
 			return false;
@@ -103,9 +118,7 @@ public class GameBoard {
 	
 	
 	public boolean isSet(int row, int col) {
-		if (!inBounds(row,col))
-			return false;
-		else return gameBoard[row][col].isOccupied();
+		return !inBounds(row,col) ? false : gameBoard[row][col].isOccupied();
 	}
 	
 	
@@ -117,7 +130,7 @@ public class GameBoard {
 	
 	
 	public GameBoardSquare getSquare(int row, int col) {
-		return (inBounds(row,col) ? gameBoard[row][col] : null);
+		return inBounds(row,col) ? gameBoard[row][col] : null;
 	}
 	
 	
@@ -136,7 +149,7 @@ public class GameBoard {
 	
 	
 	public boolean setSquare(int row, int col, Color color) {
-		return (!inBounds(row,col) ? false : gameBoard[row][col].setSquare(color));
+		return !inBounds(row,col) ? false : gameBoard[row][col].setSquare(color);
 	}
 	
 	
@@ -221,7 +234,7 @@ public class GameBoard {
 				deletedRows.add(i);
 		}
 		
-		//Now, we animate the row deletion.
+		//Now, we animate the row deletion. Oh boy.
 		
 		return 0;
 	}

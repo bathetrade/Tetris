@@ -30,4 +30,16 @@ public class Point {
 			this.y = p.y;
 		}
 	}
+	
+	public Point add(Vec2D v) {
+		this.x += v.x;
+		this.y += v.y;
+		return this;
+	}
+	
+	public Point subtract(Vec2D v) {
+		this.x -= v.x;
+		this.y -= v.y;
+		return this;
+	}
 }
