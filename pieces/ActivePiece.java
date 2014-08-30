@@ -6,8 +6,8 @@ import point.*;
 import pieces.GameBoardSquare.MoveType;
 import logic.GameBoard;
 import logic.GameBoard.PieceType;
-import java.util.Collection;
-import java.util.ArrayList;
+import logic.SubsquareCollision;
+import logic.SubsquareCollisionList;
 
 public class ActivePiece {
 	
@@ -22,7 +22,8 @@ public class ActivePiece {
 		COL_LEFT,
 		COL_RIGHT,
 		COL_SIDE,  //when we don't care which side was collided with
-		COL_BOTTOM
+		COL_BOTTOM,
+		COL_TOP
 	}
 	/**
 	 * Checks to see if the move is possible without a collision. It is necessary to call this function
@@ -160,6 +161,7 @@ public class ActivePiece {
 		}
 		this.type = type;
 		
+		//This is the source of the bug that causes mayhem when pieces are rotated above the board.
 		for (int i=0; i<4; ++i) {
 			if (!theBoard.setSquare(piece[i].x, piece[i].y, this.color))
 				return false;
@@ -176,7 +178,7 @@ public class ActivePiece {
 	
 	public void clearPiece() {
 		for (int i=0; i<4; ++i) {
-			theBoard.unsetSquare(piece[i].x, piece[i].y);
+			theBoard.clearSquare(piece[i].x, piece[i].y);
 			piece[i].set(-1, -1);
 		}
 	}
@@ -227,7 +229,7 @@ public class ActivePiece {
 	
 	/* Things to do....
 	 * 1) Improve rotation so pieces "bounce" off walls and objects when rotated.
-	 * 2) Add images to Tetris pieces.
+	 * 2) Add textures to Tetris pieces.
 	 * 3) Add an animation for row deletion. Also, add the row deletion.
 	 **/
 	
@@ -284,7 +286,7 @@ public class ActivePiece {
 		
 		
 		
-		//2,3) Make a copy of the original piece and rotate it.
+		//2) Make a copy of the original piece.
 		//"Pivot" is subsquare that the tetris piece rotates about. The pivot is always the first point.
 		//In order to rotate, we translate the pivot's center to the origin.
 		//The origin is at the top-left of the game board.
@@ -296,11 +298,11 @@ public class ActivePiece {
 			rotatedPoint[i] = new Point(originalPiece[i]);
 		
 		
-		//Rotate the piece (rotate each subsquare about the pivot)
-		//See if the rotation causes a piece to go out of bounds.
+		//3) Rotate the piece (rotate each subsquare about the pivot)
+		//See if the rotation causes a piece to go out of bounds and/or causes a collision with another piece.
 		CollisionType collisionType = CollisionType.COL_NONE;
-		Point mostOutstandingSubsquare = new Point(); //Keep track of the subsquare that's the farthest out of bounds.
-		Collection<Point> subsquareCollisionList = new ArrayList<Point>(4); //Keep track of piece collisions
+		Point mostOutstandingSubsquare = new Point(0,0); //Keep track of the subsquare that's the farthest out of bounds.
+		SubsquareCollisionList subsquareCollisionList = new SubsquareCollisionList(); //Keep track of piece collisions
 		boolean outOfBounds = false;
 		boolean pieceCollision = false;
 		boolean rotationSuccessful = false;
@@ -333,8 +335,7 @@ public class ActivePiece {
 			
 			
 			//If the subsquare is to the left of the board....
-			if (rotatedPoint[i].y < 0) {//the y component corresponds to the column (confusing!)
-				outOfBounds = true;
+			if (theBoard.outOfBoundsLeft(rotatedPoint[i])) {//the y component corresponds to the column (confusing!)
 				System.out.println("Subsquare is to the left of the board");
 				collisionType = CollisionType.COL_LEFT;
 				if (rotatedPoint[i].y  < mostOutstandingSubsquare.y)
@@ -342,8 +343,7 @@ public class ActivePiece {
 			}
 			
 			//If the subsquare is to the right of the board...
-			else if (rotatedPoint[i].y >= theBoard.getCols()) {
-				outOfBounds = true;
+			else if (theBoard.outOfBoundsRight(rotatedPoint[i])) {
 				System.out.println("Subsquare is to the right of the board");
 				collisionType = CollisionType.COL_RIGHT;
 				if (rotatedPoint[i].y > mostOutstandingSubsquare.y)
@@ -351,26 +351,44 @@ public class ActivePiece {
 			}
 			
 			//If the subsquare is under the board
-			else if (rotatedPoint[i].x >= theBoard.getRows()) {
-				outOfBounds = true;
+			else if (theBoard.outOfBoundsBottom(rotatedPoint[i])) {
 				System.out.println("Subsquare is under the board!");
 				collisionType = CollisionType.COL_BOTTOM;
 				if (rotatedPoint[i].x > mostOutstandingSubsquare.x)
 					mostOutstandingSubsquare.set(rotatedPoint[i]);
 			}
-			else if (theBoard.isSet(rotatedPoint[i].x, rotatedPoint[i].y))
-				subsquareCollisionList.add(rotatedPoint[i]);
+			
+			//If the subsquare is colliding with another subsquare...
+			//determine on which side of the original piece the collision occurs
+			else if (theBoard.isSet(rotatedPoint[i])) { //Redundant out of bounds check; cleaner code.
+				
+				//If a piece P gets rotated into a new piece, R, and R is colliding with a subsquare S,
+				//then S will be on one and only one side of P. Thus, we can pick any subsquare from P
+				//to compare against S (in this case, S is rotatedPoint[i]).
+				if (rotatedPoint[i].y < originalPiece[0].y)
+					subsquareCollisionList.add(new SubsquareCollision(rotatedPoint[i], CollisionType.COL_LEFT));
+				
+				else if (rotatedPoint[i].y > originalPiece[0].y)
+					subsquareCollisionList.add(new SubsquareCollision(rotatedPoint[i], CollisionType.COL_RIGHT));
+				
+				else if (rotatedPoint[i].x > originalPiece[0].x)
+					subsquareCollisionList.add(new SubsquareCollision(rotatedPoint[i], CollisionType.COL_BOTTOM));
+				
+				else
+					subsquareCollisionList.add(new SubsquareCollision(rotatedPoint[i], CollisionType.COL_TOP));
+				
+			}
 		}
 		
 		//4) If the piece was ONLY rotated out of bounds, try to kick it back.
 		//If the piece is out of bounds AND colliding with a piece, then the 
 		//rotation isn't possible.
+		outOfBounds = !(mostOutstandingSubsquare.x == 0 && mostOutstandingSubsquare.y == 0);
 		pieceCollision = !subsquareCollisionList.isEmpty();
-		int numCollisions = subsquareCollisionList.size();
-		System.out.println("Number of piece collisions: " + numCollisions);
 		
 		
 		if (outOfBounds && !pieceCollision) {
+			
 			
 			int kickAmount = 0;
 			boolean kickable = false;
@@ -385,7 +403,7 @@ public class ActivePiece {
 				offset.set(0, kickAmount);
 				for (int i = 0; i < 4; ++i)
 					rotatedPoint[i].add(offset);
-				kickable = !theBoard.checkCollision(rotatedPoint);
+				kickable = !theBoard.checkPieceCollision(rotatedPoint);
 				break;
 			
 			case COL_RIGHT:
@@ -393,15 +411,15 @@ public class ActivePiece {
 				offset.set(0, kickAmount);
 				for (int i = 0; i < 4; ++i)
 					rotatedPoint[i].add(offset);
-				kickable = !theBoard.checkCollision(rotatedPoint);
+				kickable = !theBoard.checkPieceCollision(rotatedPoint);
 				break;
 				
 			case COL_BOTTOM:
-				kickAmount = (theBoard.getRows() -1) - mostOutstandingSubsquare.x;
+				kickAmount = (theBoard.getRows() - 1) - mostOutstandingSubsquare.x;
 				offset.set(kickAmount, 0);
 				for (int i = 0; i < 4; ++i)
 					rotatedPoint[i].add(offset);
-				kickable = !theBoard.checkCollision(rotatedPoint);
+				kickable = !theBoard.checkPieceCollision(rotatedPoint);
 				break;
 				
 			default:
@@ -409,11 +427,80 @@ public class ActivePiece {
 			}
 			rotationSuccessful = kickable;
 		}
+		
+		
+		else if (outOfBounds && pieceCollision)
+			rotationSuccessful = false;
+		
+		
+		//If there is only a piece collision, then we check to see whether the collision is entirely to one
+		//side of the original piece. If so, we try to kick it away from the collision, which succeeds if 
+		//the kicked piece isn't out of bounds or in another piece.
+		//If the collision isn't entirely to one side, then the rotation isn't possible.
+		else if (!outOfBounds && pieceCollision) {
+			System.out.println("This is called");
+			
+			if (!subsquareCollisionList.hasSameCollisionType()) {
+				rotationSuccessful = false;
+			}
+			
+			else {
+				int kickAmount = 0;
+				boolean kickable = false;
+				Vec2D offset = new Vec2D();
+				CollisionType colType = subsquareCollisionList.getCollisionType();
+				
+				switch(colType) {
+				
+				case COL_LEFT:
+					kickAmount = originalPiece[0].y - subsquareCollisionList.getMostOutstandingSubsquare().y;
+					offset.set(0, kickAmount);
+					for (int i = 0; i < 4; ++i)
+						rotatedPoint[i].add(offset);
+					
+					//The piece is kickable if kicking it doesn't cause it to hit another piece or go out of bounds.
+					kickable = !theBoard.checkPieceCollision(rotatedPoint) && theBoard.isPieceInBounds(rotatedPoint);
+					break;
+					
+				case COL_RIGHT:
+					kickAmount = originalPiece[0].y - subsquareCollisionList.getMostOutstandingSubsquare().y;
+					offset.set(0, kickAmount);
+					for (int i = 0; i < 4; ++i)
+						rotatedPoint[i].add(offset);
+					kickable = !theBoard.checkPieceCollision(rotatedPoint) && theBoard.isPieceInBounds(rotatedPoint);
+					break;
+					
+				case COL_BOTTOM:
+					kickAmount = originalPiece[0].x - subsquareCollisionList.getMostOutstandingSubsquare().x;
+					offset.set(kickAmount, 0);
+					for (int i = 0; i < 4; ++i)
+						rotatedPoint[i].add(offset);
+					kickable = !theBoard.checkPieceCollision(rotatedPoint) && theBoard.isPieceInBounds(rotatedPoint);
+					break;
+					
+				case COL_TOP:
+					kickAmount = originalPiece[0].x - subsquareCollisionList.getMostOutstandingSubsquare().x;
+					offset.set(kickAmount, 0);
+					for (int i = 0; i < 4; ++i)
+						rotatedPoint[i].add(offset);
+					kickable = !theBoard.checkPieceCollision(rotatedPoint) && theBoard.isPieceInBounds(rotatedPoint);
+					break;
+					
+				default:
+					break;
+					
+				}
+				
+				rotationSuccessful = kickable;
+			}
+			
+		}
+		
+		
 		else
 			rotationSuccessful = true;
 		
 		
-		System.out.println("Rotation success: " + rotationSuccessful);
 		if (rotationSuccessful)
 			setPiece(rotatedPoint, this.type);
 		else

@@ -144,10 +144,10 @@ public class TetrisGame extends BasicGame {
 		//Check timer to see if it's time to move the active piece down
 			long currentTime = System.nanoTime();
 			if ((currentTime - baseTime)/1000000000 > 1 || moveNow == true) {
-				if (theBoard.getActivePiece().move(MoveType.MOVE_DOWN, moveAmount) == CollisionType.COL_BOTTOM) {
-					if (!theBoard.spawnPiece())
-						gameOver = true;
-				}
+//				if (theBoard.getActivePiece().move(MoveType.MOVE_DOWN, moveAmount) == CollisionType.COL_BOTTOM) {
+//					if (!theBoard.spawnPiece())
+//						gameOver = true;
+//				}
 				baseTime = currentTime;
 				/*theBoard.printBoard();
 				System.out.println("..............................");

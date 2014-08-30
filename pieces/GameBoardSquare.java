@@ -11,7 +11,7 @@ import tetrisgame.TetrisGame;
 //This class represents an individual "square" on the game board.
 public class GameBoardSquare {
 	
-	private boolean isOccupied;
+	private boolean isSet;
 	private Color color;
 	
 	
@@ -21,19 +21,19 @@ public class GameBoardSquare {
 		MOVE_LEFT
 	}
 	public GameBoardSquare() {
-		isOccupied = false;
+		isSet = false;
 		color      = Color.white;
 	}
 	
 	
 	public GameBoardSquare(Color color) {
 		this.color = color;
-		isOccupied = true;
+		isSet = true;
 	}
 	
 	
-	public boolean isOccupied() {
-		return isOccupied;
+	public boolean isSet() {
+		return isSet;
 	}
 
 	
@@ -57,18 +57,18 @@ public class GameBoardSquare {
 	 */
 	
 	public boolean setSquare(Color color) {
-		if (isOccupied)
+		if (isSet)
 			return false;
 		else {
-			isOccupied = true;
+			isSet = true;
 			this.color = color;
 			return true;
 		}
 	}
 	
 	
-	public void unsetSquare() {
-		isOccupied = false;
+	public void clearSquare() {
+		isSet = false;
 	}
 	
 	
@@ -99,7 +99,7 @@ public class GameBoardSquare {
 		if (row < TetrisGame.numInvisRows)
 			return;
 		
-		if (isOccupied) {
+		if (isSet) {
 			g.setColor(color);
 			int size = TetrisGame.pieceSize;
 			Point p  = boardToScreen(row, col, container);

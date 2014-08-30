@@ -92,16 +92,72 @@ public class GameBoard {
 
 	
 	
-	
-	public boolean checkCollision(Point[] piece) {
+	/**
+	 * Checks whether an array of subsquares has at least one of them set. Basically, the same as isSet(int,int)
+	 * except for an array.
+	 * @param piece - An array of subsquares.
+	 * @return Returns true if at least one element of the array is set on the game board. Otherwise, false.
+	 * Does not count a subsquare being out of bounds as a collision.
+	 */
+	public boolean checkPieceCollision(Point[] piece) {
 		for (int i = 0; i < 4; ++i) {
-			if (!inBounds(piece[i].x, piece[i].y))
-				return true;
-			else
-				if (isSet(piece[i].x, piece[i].y))
+				if (isSet(piece[i]))
 					return true;
 		}
 		return false;
+	}
+	
+	
+	
+	
+	public boolean isPieceInBounds(Point[] piece) {
+		for (int i = 0; i < 4; ++i) {
+			if (!inBounds(piece[i]))
+				return false;
+		}
+		return true;
+	}
+	
+	
+	
+	
+	public boolean outOfBoundsLeft(int row, int col) {
+		return col < 0;
+	}
+	
+	
+	
+	
+	public boolean outOfBoundsLeft(Point p) {
+		return p.y < 0;
+	}
+	
+	
+	
+	
+	public boolean outOfBoundsRight(Point p) {
+		return p.y >= this.cols;
+	}
+	
+	
+	
+	
+	public boolean outOfBoundsBottom(Point p) {
+		return p.x >= this.rows;
+	}
+	
+	
+	
+	
+	public boolean outOfBoundsRight(int row, int col) {
+		return col >= this.cols;
+	}
+	
+	
+	
+	
+	public boolean outOfBoundsBottom(int row, int col) {
+		return row >= this.rows;
 	}
 	
 	
@@ -117,9 +173,25 @@ public class GameBoard {
 	
 	
 	
-	public boolean isSet(int row, int col) {
-		return !inBounds(row,col) ? false : gameBoard[row][col].isOccupied();
+	
+	public boolean inBounds(Point p) {
+		return inBounds(p.x, p.y);
 	}
+	
+	
+	
+	
+	public boolean isSet(int row, int col) {
+		return !inBounds(row,col) ? false : gameBoard[row][col].isSet();
+	}
+	
+	
+	
+	
+	public boolean isSet(Point p) {
+		return !inBounds(p.x, p.y) ? false : gameBoard[p.x][p.y].isSet();
+	}
+	
 	
 	
 	
@@ -135,11 +207,18 @@ public class GameBoard {
 	
 	
 	
+	public GameBoardSquare getSquare(Point p) {
+		return inBounds(p.x, p.y) ? gameBoard[p.x][p.y] : null; 
+	}
+	
+	
+	
+	
 	public void printBoard() {
 		int set;
 		for (int i=0; i<rows; ++i) {
 			for (int j=0; j<cols; ++j) {
-				set       = gameBoard[i][j].isOccupied() ? 1 : 0;
+				set       = gameBoard[i][j].isSet() ? 1 : 0;
 				System.out.print(set + "  ");
 			}
 			System.out.println();
@@ -154,17 +233,33 @@ public class GameBoard {
 	
 	
 	
-	public void unsetSquare(int row, int col) {
-		if (inBounds(row,col))
-			gameBoard[row][col].unsetSquare();
+	public boolean setSquare(Point p, Color color) {
+		return !inBounds(p.x, p.y) ? false : gameBoard[p.x][p.y].setSquare(color);
 	}
+	
+	
+	
+	
+	public void clearSquare(int row, int col) {
+		if (inBounds(row,col))
+			gameBoard[row][col].clearSquare();
+	}
+	
+	
+	
+	
+	public void clearSquare(Point p) {
+		clearSquare(p.x, p.y);
+	}
+	
 	
 	
 	
 	public boolean spawnPiece() {
 		int hw = cols/2;  //Half of the board's width.
 		
-		PieceType type = PieceType.fromInteger(RNG.nextInt(PieceType.numPieces));
+		PieceType type = PieceType.PIECE_LINE;
+		//PieceType type = PieceType.fromInteger(RNG.nextInt(PieceType.numPieces));
 		
 		//Pieces are specified in logic space. Example of a line:
 		//0 0 0 0 0 0 ....
@@ -226,7 +321,7 @@ public class GameBoard {
 		for (int i = 0; i < rows; ++i) {
 			boolean fullRow = true;
 			for (int j = 0; j < cols; ++j) {
-				if (!getSquare(i,j).isOccupied())
+				if (!getSquare(i,j).isSet())
 					fullRow = false;
 			}
 			//If fullRow = true, then we add the row to be deleted.
