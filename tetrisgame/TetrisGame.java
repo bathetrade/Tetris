@@ -8,7 +8,6 @@ import org.newdawn.slick.SlickException;
 import org.newdawn.slick.Input;
 import org.newdawn.slick.Color;
 import org.newdawn.slick.Music;
-import pieces.ActivePiece.CollisionType;
 import pieces.GameBoardSquare.MoveType;
 
 public class TetrisGame extends BasicGame {
@@ -55,7 +54,7 @@ public class TetrisGame extends BasicGame {
 		//Initialize sound
 		try {
 			tetrisTheme = new Music(new String("sounds//SMB-X.XM"));
-			tetrisTheme.loop();
+			//tetrisTheme.loop();
 			tetrisTheme.setVolume(0.05f);
 		}
 		catch(SlickException e) {
@@ -106,7 +105,7 @@ public class TetrisGame extends BasicGame {
 			
 			else if (input.isKeyDown(Input.KEY_DOWN)) {
 				if (!isKeyDown) {
-					if (theBoard.getActivePiece().move(MoveType.MOVE_DOWN, moveAmount) == CollisionType.COL_BOTTOM) {
+					if (!theBoard.getActivePiece().move(MoveType.MOVE_DOWN, moveAmount)) {
 						if (!theBoard.spawnPiece())
 							gameOver = true;
 					}
@@ -141,17 +140,17 @@ public class TetrisGame extends BasicGame {
 			
 			else isKeyDown = false;
 		
-		//Check timer to see if it's time to move the active piece down
+			//Check timer to see if it's time to move the active piece down
 			long currentTime = System.nanoTime();
 			if ((currentTime - baseTime)/1000000000 > 1 || moveNow == true) {
-				if (theBoard.getActivePiece().move(MoveType.MOVE_DOWN, moveAmount) == CollisionType.COL_BOTTOM) {
+				if (!theBoard.getActivePiece().move(MoveType.MOVE_DOWN, moveAmount)){
 					if (!theBoard.spawnPiece())
 						gameOver = true;
 				}
 				baseTime = currentTime;
-				/*theBoard.printBoard();
-				System.out.println("..............................");
-				System.out.println(".............................."); */
+//				theBoard.printBoard();
+//				System.out.println("..............................");
+//				System.out.println("..............................");
 			}
 		}
 		

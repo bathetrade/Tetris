@@ -1,13 +1,17 @@
 package pieces;
 
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+
 import org.newdawn.slick.Color;
 
 import point.*;
 import pieces.GameBoardSquare.MoveType;
 import logic.GameBoard;
 import logic.GameBoard.PieceType;
-import java.util.Collection;
-import java.util.ArrayList;
+import logic.SubsquareCollision;
+import logic.SubsquareCollisionList;
 
 public class ActivePiece {
 	
@@ -22,90 +26,199 @@ public class ActivePiece {
 		COL_LEFT,
 		COL_RIGHT,
 		COL_SIDE,  //when we don't care which side was collided with
-		COL_BOTTOM
-	}
-	/**
-	 * Checks to see if the move is possible without a collision. It is necessary to call this function
-	 * before calling move().
-	 * @param type - An enum of type moveType. Possible values are MOVE_DOWN, MOVE_RIGHT, and MOVE_LEFT.
-	 * @param numUnits - The number of units to move the piece.
-	 * @return Indicates whether the move is possible without a collision.
-	 */
-	private boolean checkMove(MoveType type, int numUnits) {
-		Vec2D moveVector = new Vec2D();
-		switch (type) {
-		case MOVE_DOWN:
-			moveVector.set(numUnits, 0);
-			break;
-		case MOVE_LEFT:
-			moveVector.set(0, -numUnits);
-			break;
-		case MOVE_RIGHT:
-			moveVector.set(0, numUnits);
-			break;
-		}
-		
-		//Check if moved piece will cause a collision
-		//This is potentially inefficient for two reasons. First, isSet() and
-		//isPartOfPiece() are called even if the subsquare is out of bounds.
-		//Second, this algorithm is quadratic, whereas it would be linear to
-		//unset the piece, move it, check if it collides, and if so, move it back
-		//(and set the piece back).
-		int moved_row = 0;
-		int moved_col = 0;
-		for (int i=0; i<4; ++i) {
-			
-			moved_row = piece[i].x+moveVector.x;
-			moved_col = piece[i].y+moveVector.y;
-			boolean inBounds    = theBoard.inBounds(moved_row, moved_col); //Is moved piece in bounds?
-			boolean isSet       = theBoard.isSet(moved_row, moved_col); //Is it already set?
-			boolean partOfPiece = isPartOfPiece(moved_row, moved_col); //Ignore when a piece collides
-																	   //with itself.
-			
-			if (!inBounds)
-				return false;
-			
-			if (isSet && !partOfPiece)  //Check if piece collides with another piece; ignore collisions with self.
-				return false;
-			
-		}
-		return true;
-	}
-
-
-
-
-
-	/**
-	 * This functions check a square on the gameboard at the position (row, col) to see if it's a part
-	 * of the active piece (the piece being controlled by input). This is to avoid triggering a collision
-	 * that is the result of one square in the active piece colliding with another square in the active piece.
-	 * @param row - the row to check.
-	 * @param col - the column to check.
-	 * @return Returns a boolean indicating whether the specified square is a part of the active piece.
-	 */
-	private boolean isPartOfPiece(int row, int col) {
-		for (int i=0; i<4; ++i) {
-			if (piece[i].x == row && piece[i].y == col)
-				return true;
-		}
-		return false;
+		COL_BOTTOM,
+		COL_TOP
 	}
 
 
 
 	
-	private void translate(int row, int col) {
-		Point[] movedPiece = new Point[4];
-		for (int i=0; i<4; ++i)
-			movedPiece[i] = new Point(piece[i].x + row, piece[i].y + col);
-		clearPiece();
-		setPiece(movedPiece, this.type);
+	private boolean isLeftOfPiece(Point subsquare, Point[] piece) {
+		for (int i = 0; i < 4; ++i) {
+			if (!(subsquare.y < piece[i].y))
+				return false;
+		}
+		return true;
 	}
-
-
-
-
+	
+	
+	
+	private boolean isRightOfPiece(Point subsquare, Point[] piece) {
+		for (int i = 0; i < 4; ++i) {
+			if (!(subsquare.y > piece[i].y))
+				return false;
+		}
+		return true;
+	}
+	
+	
+	
+	
+	private boolean isUnderPiece(Point subsquare, Point[] piece) {
+		for (int i = 0; i < 4; ++i) {
+			if (!(subsquare.x > piece[i].x))
+				return false;
+		}
+		return true;
+	}
+	
+	
+	
+	
+	@SuppressWarnings("unused") private boolean isAbovePiece(Point subsquare, Point[] piece) {
+		for (int i = 0; i < 4; ++i) {
+			if (!(subsquare.x < piece[i].x))
+				return false;
+		}
+		return true;
+	}
+	
+	
+	
+	
+	private Vec2D getOOBKickVector(SubsquareCollisionList subsquareOOBList) {
+		
+		try {
+			if (!subsquareOOBList.hasSameCollisionType())
+				throw new Exception("A piece cannot be out of bounds on more than one side.");
+		}
+		catch(Exception e) {
+			e.printStackTrace();
+			return new Vec2D(0,0);
+		}
+		
+		
+		Comparator<SubsquareCollision> outstandingSubsquareOrdering;
+		
+		Point outstandingSubsquare;
+		Vec2D kickVector = new Vec2D(0,0);
+		int kickAmount = 0;
+		
+		switch (subsquareOOBList.getCollisionType()) {
+		
+		case COL_LEFT:
+			
+			//Ascending sort-by-col comparator (use min() to find left-most OOB subsquare)
+			outstandingSubsquareOrdering = new Comparator<SubsquareCollision>() {
+				public int compare(SubsquareCollision s1, SubsquareCollision s2) {
+					return s1.getSubsquare().y - s2.getSubsquare().y;
+				}
+			};
+			outstandingSubsquare = Collections.min(subsquareOOBList.getList(), outstandingSubsquareOrdering).getSubsquare();
+			kickAmount = -outstandingSubsquare.y;
+			kickVector.set(0, kickAmount);
+			return kickVector;
+		
+		case COL_RIGHT:
+			
+			//Ascending sort-by-col comparator (use max() to find right-most OOB subsquare)
+			outstandingSubsquareOrdering = new Comparator<SubsquareCollision>() {
+				public int compare(SubsquareCollision s1, SubsquareCollision s2) {
+					return s1.getSubsquare().y - s2.getSubsquare().y;
+				}
+			};
+			outstandingSubsquare = Collections.max(subsquareOOBList.getList(), outstandingSubsquareOrdering).getSubsquare();
+			kickAmount = (theBoard.getCols() - 1) - outstandingSubsquare.y;
+			kickVector.set(0, kickAmount);
+			return kickVector;
+			
+		case COL_BOTTOM:
+			
+			//Ascending sort-by-row comparator (use max() to find bottom-most OOB subsquare)
+			outstandingSubsquareOrdering = new Comparator<SubsquareCollision>() {
+				public int compare(SubsquareCollision s1, SubsquareCollision s2) {
+					return s1.getSubsquare().x - s2.getSubsquare().x;
+				}
+			};
+			outstandingSubsquare = Collections.max(subsquareOOBList.getList(), outstandingSubsquareOrdering).getSubsquare();
+			kickAmount = (theBoard.getRows() - 1) - outstandingSubsquare.x;
+			kickVector.set(kickAmount, 0);
+			return kickVector;
+		
+		default:    //Should never happen
+			break;
+		}
+		
+		return kickVector; //Should never happen
+	}
+	
+	
+	
+	
+	private Vec2D getCollisionKickVector(SubsquareCollisionList subsquareCollisionList) {
+		Vec2D kickVector = new Vec2D(0,0);
+		
+		//Scan the collision list for number of "unique" subsquares in the 
+		//direction of the collision. For example, if the subsquare collision list
+		//consists of the subsquares {(1,5), (2,5), (2,4)}, which are ordered pairs of
+		//rows and columns, respectively, and the collision happened on the left side
+		//of the piece, then we take "unique" to mean collisions with a unique column
+		//index. In this case, unique entries would be either {(1,5), (2,4)} or 
+		//{(2,5), (2,4)}, and the number of unique entries would be 2. This is 
+		//the magnitude of the kick amount. (*sigh*)
+		List<SubsquareCollision> collisionList = subsquareCollisionList.getList();
+		int listSize = collisionList.size();
+		if (listSize == 0) {
+			System.out.println("Error in getCollisionKickVector(): collision list is empty");
+			return kickVector;
+		}
+		
+		
+		int previous = 0;
+		int numUniqueSubsquares = 1; //List is nonempty; at least one unique entry.
+		
+		switch(subsquareCollisionList.getCollisionType()) {
+		
+		case COL_LEFT:
+			previous = collisionList.get(0).getSubsquare().y;
+			for (int i = 1; i < listSize; ++i) {
+				if (collisionList.get(i).getSubsquare().y != previous)
+					++numUniqueSubsquares;
+			}
+			kickVector.set(0, numUniqueSubsquares);
+			return kickVector;
+			
+			
+		case COL_RIGHT:
+			previous = collisionList.get(0).getSubsquare().y;
+			for (int i = 1; i < listSize; ++i) {
+				if (collisionList.get(i).getSubsquare().y != previous)
+					++numUniqueSubsquares;
+			}
+			kickVector.set(0, -numUniqueSubsquares);
+			return kickVector;
+			
+			
+		case COL_BOTTOM:
+			previous = collisionList.get(0).getSubsquare().x;
+			for (int i = 1; i < listSize; ++i) {
+				if (collisionList.get(i).getSubsquare().x != previous)
+					++numUniqueSubsquares;
+			}
+			kickVector.set(-numUniqueSubsquares, 0);
+			return kickVector;
+			
+			
+		case COL_TOP:
+			previous = collisionList.get(0).getSubsquare().x;
+			for (int i = 1; i < listSize; ++i) {
+				if (collisionList.get(i).getSubsquare().x != previous)
+					++numUniqueSubsquares;
+			}
+			kickVector.set(numUniqueSubsquares, 0);
+			return kickVector;
+			
+		default:
+			break;
+			
+			
+		}
+		return kickVector;
+	}
+	
+	
+	
+	
 	public ActivePiece(GameBoard theBoard) {
 		this.theBoard = theBoard;
 		piece         = new Point[4];
@@ -118,7 +231,7 @@ public class ActivePiece {
 	
 	
 	public void dropPiece() {
-		while (move(MoveType.MOVE_DOWN, 1) != CollisionType.COL_BOTTOM);
+		while (move(MoveType.MOVE_DOWN, 1));
 	}
 
 
@@ -160,15 +273,18 @@ public class ActivePiece {
 		}
 		this.type = type;
 		
+		//This is the source of the bug that causes mayhem when pieces are rotated above the board.
+		boolean pieceInBounds = true;
 		for (int i=0; i<4; ++i) {
 			if (!theBoard.setSquare(piece[i].x, piece[i].y, this.color))
-				return false;
+				//return false;
+				pieceInBounds = false;
 		}
 		
 		for (int i=0; i<4; ++i)
 			this.piece[i].set(piece[i].x, piece[i].y);
 		
-		return true;
+		return pieceInBounds;
 	}
 	
 	
@@ -176,7 +292,7 @@ public class ActivePiece {
 	
 	public void clearPiece() {
 		for (int i=0; i<4; ++i) {
-			theBoard.unsetSquare(piece[i].x, piece[i].y);
+			theBoard.clearSquare(piece[i].x, piece[i].y);
 			piece[i].set(-1, -1);
 		}
 	}
@@ -185,49 +301,67 @@ public class ActivePiece {
 	
 	
 	/**
-	 * Moves the active Tetris piece being controlled by input.
-	 * @param type - An enum of type moveType. Possible values are MOVE_DOWN, MOVE_RIGHT, and MOVE_LEFT.
+	 * Moves the active Tetris piece being controlled by input, if possible.
+	 * @param type - An enum of type MoveType. Possible values are MOVE_DOWN, MOVE_RIGHT, and MOVE_LEFT.
 	 * @param numUnits - The number of units to move the piece.
-	 * @return Returns a value in the enum collisionType. Possible values are COL_LEFT, COL_RIGHT, COL_SIDE,
-	 * COL_BOTTOM, and COL_NONE.
+	 * @return Returns true if the move was successful, and false otherwise.
 	 */
-	public CollisionType move(MoveType type, int numUnits) {
+	public boolean move(MoveType type, int numUnits) {
 		
-		numUnits = Math.abs(numUnits);
-		
+		Vec2D moveVector = new Vec2D();
 		switch (type) {
 		
-		case MOVE_DOWN:
-			
-			//Make sure we can move it down without hitting anything
-			if (!checkMove(type, numUnits))
-				return CollisionType.COL_BOTTOM;
-			
-			translate(numUnits,0);
+		case MOVE_LEFT:
+			moveVector.set(0, -numUnits);
 			break;
-			
-			
-		case MOVE_LEFT:										//MOVE_LEFT and MOVE_RIGHT
-			if (!checkMove(type, numUnits))
-				return CollisionType.COL_SIDE;
-			
-			translate(0,-numUnits);
-			break;
-			
 			
 		case MOVE_RIGHT:
-			if (!checkMove(type, numUnits))
-				return CollisionType.COL_SIDE;
+			moveVector.set(0, numUnits);
+			break;
 			
-			translate(0,numUnits);
+		case MOVE_DOWN:
+			moveVector.set(numUnits, 0);
+			break;
+			
 		}
 		
-		return CollisionType.COL_NONE;
+		//Copy the piece
+		Point[] originalPiece = new Point[4];
+		Point[] movedPiece = new Point[4];
+		for (int i = 0; i < 4; ++i) {
+			originalPiece[i] = new Point(this.piece[i]);
+			movedPiece[i] = new Point(this.piece[i]);
+		}
+		
+		//Clear the active piece from the board (to get it out of the way).
+		clearPiece();
+		
+		//Try moving.
+		for (int i = 0; i < 4; ++i)
+			movedPiece[i].add(moveVector);
+		
+		//Check whether the moved piece is colliding with anything or out of bounds.
+		//We don't care if the piece is above the board; only left, right, or below.
+		//(Otherwise, a line sticking above the top of the board wouldn't move.)
+		boolean inBounds = theBoard.isPieceInBoundsLeftRightBottom(movedPiece);
+		boolean pieceCollision = theBoard.checkPieceCollision(movedPiece);
+		boolean moveSuccessful = inBounds && !pieceCollision;
+		
+		if (moveSuccessful) {
+			setPiece(movedPiece, this.type);
+			return true;
+		}
+		
+		else {
+			setPiece(originalPiece, this.type);
+			return false;
+		}
+
 	}
 	
 	/* Things to do....
 	 * 1) Improve rotation so pieces "bounce" off walls and objects when rotated.
-	 * 2) Add images to Tetris pieces.
+	 * 2) Add textures to Tetris pieces.
 	 * 3) Add an animation for row deletion. Also, add the row deletion.
 	 **/
 	
@@ -284,7 +418,7 @@ public class ActivePiece {
 		
 		
 		
-		//2,3) Make a copy of the original piece and rotate it.
+		//2) Make a copy of the original piece.
 		//"Pivot" is subsquare that the tetris piece rotates about. The pivot is always the first point.
 		//In order to rotate, we translate the pivot's center to the origin.
 		//The origin is at the top-left of the game board.
@@ -296,14 +430,18 @@ public class ActivePiece {
 			rotatedPoint[i] = new Point(originalPiece[i]);
 		
 		
-		//Rotate the piece (rotate each subsquare about the pivot)
-		//See if the rotation causes a piece to go out of bounds.
-		CollisionType collisionType = CollisionType.COL_NONE;
-		Point mostOutstandingSubsquare = new Point(); //Keep track of the subsquare that's the farthest out of bounds.
-		Collection<Point> subsquareCollisionList = new ArrayList<Point>(4); //Keep track of piece collisions
+		//3) Rotate the piece (rotate each subsquare about the pivot)
+		//See if the rotation causes a piece to go out of bounds and/or causes a collision with another piece.
+		//CollisionType collisionType = CollisionType.COL_NONE;
+		//Point mostOutstandingSubsquare = new Point(0,0); //Keep track of the subsquare that's the farthest out of bounds.
+		SubsquareCollisionList subsquareCollisionList = new SubsquareCollisionList(); //Keep track of piece collisions
+		SubsquareCollisionList subsquareOOBList = new SubsquareCollisionList(); //Keep track of out of bounds collisions
 		boolean outOfBounds = false;
 		boolean pieceCollision = false;
-		boolean rotationSuccessful = false;
+		boolean rotationSuccessful = true;
+		
+		//Fit everything into one loop to decrease loop iterations and 
+		//decrease readability. =)
 		for (int i=0; i<4; ++i) {
 			
 			//Translate to origin before rotating.
@@ -333,93 +471,107 @@ public class ActivePiece {
 			
 			
 			//If the subsquare is to the left of the board....
-			if (rotatedPoint[i].y < 0) {//the y component corresponds to the column (confusing!)
-				outOfBounds = true;
+			if (theBoard.outOfBoundsLeft(rotatedPoint[i])) {//the y component corresponds to the column (confusing!)
 				System.out.println("Subsquare is to the left of the board");
-				collisionType = CollisionType.COL_LEFT;
-				if (rotatedPoint[i].y  < mostOutstandingSubsquare.y)
-					mostOutstandingSubsquare.set(rotatedPoint[i]);
+				//collisionType = CollisionType.COL_LEFT;
+				subsquareOOBList.add(new SubsquareCollision(rotatedPoint[i], CollisionType.COL_LEFT));
+				//if (rotatedPoint[i].y  < mostOutstandingSubsquare.y)
+					//mostOutstandingSubsquare.set(rotatedPoint[i]);
 			}
 			
 			//If the subsquare is to the right of the board...
-			else if (rotatedPoint[i].y >= theBoard.getCols()) {
-				outOfBounds = true;
+			else if (theBoard.outOfBoundsRight(rotatedPoint[i])) {
 				System.out.println("Subsquare is to the right of the board");
-				collisionType = CollisionType.COL_RIGHT;
-				if (rotatedPoint[i].y > mostOutstandingSubsquare.y)
-					mostOutstandingSubsquare.set(rotatedPoint[i]);
+				//collisionType = CollisionType.COL_RIGHT;
+				subsquareOOBList.add(new SubsquareCollision(rotatedPoint[i], CollisionType.COL_RIGHT));
+				//if (rotatedPoint[i].y > mostOutstandingSubsquare.y)
+					//mostOutstandingSubsquare.set(rotatedPoint[i]);
 			}
 			
 			//If the subsquare is under the board
-			else if (rotatedPoint[i].x >= theBoard.getRows()) {
-				outOfBounds = true;
+			else if (theBoard.outOfBoundsBottom(rotatedPoint[i])) {
 				System.out.println("Subsquare is under the board!");
-				collisionType = CollisionType.COL_BOTTOM;
-				if (rotatedPoint[i].x > mostOutstandingSubsquare.x)
-					mostOutstandingSubsquare.set(rotatedPoint[i]);
+				subsquareOOBList.add(new SubsquareCollision(rotatedPoint[i], CollisionType.COL_BOTTOM));
+				//collisionType = CollisionType.COL_BOTTOM;
+				//if (rotatedPoint[i].x > mostOutstandingSubsquare.x)
+					//mostOutstandingSubsquare.set(rotatedPoint[i]);
 			}
-			else if (theBoard.isSet(rotatedPoint[i].x, rotatedPoint[i].y))
-				subsquareCollisionList.add(rotatedPoint[i]);
+			
+			//If the subsquare is colliding with another subsquare...
+			//determine on which side of the original piece the collision occurs
+			else if (theBoard.isSet(rotatedPoint[i])) { //Redundant out of bounds check; cleaner code.
+				
+				if (isLeftOfPiece(rotatedPoint[i], originalPiece))
+					subsquareCollisionList.add(new SubsquareCollision(rotatedPoint[i], CollisionType.COL_LEFT));
+				
+				else if (isRightOfPiece(rotatedPoint[i], originalPiece))
+					subsquareCollisionList.add(new SubsquareCollision(rotatedPoint[i], CollisionType.COL_RIGHT));
+				
+				else if (isUnderPiece(rotatedPoint[i], originalPiece))
+					subsquareCollisionList.add(new SubsquareCollision(rotatedPoint[i], CollisionType.COL_BOTTOM));
+				
+				else
+					subsquareCollisionList.add(new SubsquareCollision(rotatedPoint[i], CollisionType.COL_TOP));
+				
+			}
 		}
 		
-		//4) If the piece was ONLY rotated out of bounds, try to kick it back.
-		//If the piece is out of bounds AND colliding with a piece, then the 
-		//rotation isn't possible.
+		
+		outOfBounds = !subsquareOOBList.isEmpty();
 		pieceCollision = !subsquareCollisionList.isEmpty();
-		int numCollisions = subsquareCollisionList.size();
-		System.out.println("Number of piece collisions: " + numCollisions);
 		
 		
+		
+		//If the piece is only out of bounds, try kicking it back.
 		if (outOfBounds && !pieceCollision) {
 			
-			int kickAmount = 0;
+			
+			//int kickAmount = 0;
 			boolean kickable = false;
-			Vec2D offset = new Vec2D();
-			
-			//Note: the use of CollisionType does not imply a collision with another piece. It is being
-			//		used here to signify which side the piece is out of bounds on.
-			switch(collisionType) {
-			
-			case COL_LEFT:
-				kickAmount = -mostOutstandingSubsquare.y;
-				offset.set(0, kickAmount);
-				for (int i = 0; i < 4; ++i)
-					rotatedPoint[i].add(offset);
-				kickable = !theBoard.checkCollision(rotatedPoint);
-				break;
-			
-			case COL_RIGHT:
-				kickAmount = (theBoard.getCols() - 1) - mostOutstandingSubsquare.y;
-				offset.set(0, kickAmount);
-				for (int i = 0; i < 4; ++i)
-					rotatedPoint[i].add(offset);
-				kickable = !theBoard.checkCollision(rotatedPoint);
-				break;
-				
-			case COL_BOTTOM:
-				kickAmount = (theBoard.getRows() -1) - mostOutstandingSubsquare.x;
-				offset.set(kickAmount, 0);
-				for (int i = 0; i < 4; ++i)
-					rotatedPoint[i].add(offset);
-				kickable = !theBoard.checkCollision(rotatedPoint);
-				break;
-				
-			default:
-				break;
-			}
+			Vec2D offset = getOOBKickVector(subsquareOOBList);
+			for (int i = 0; i < 4; ++i)
+				rotatedPoint[i].add(offset);
+			kickable = !theBoard.checkPieceCollision(rotatedPoint);
 			rotationSuccessful = kickable;
 		}
-		else
-			rotationSuccessful = true;
+		
+		//This is a bug. A piece can be successfully kicked if it's out of
+		//bounds and colliding with another piece, although this can only happen
+		//with a line. Will fix later if less lazy.
+		else if (outOfBounds && pieceCollision)
+			rotationSuccessful = false;
 		
 		
-		System.out.println("Rotation success: " + rotationSuccessful);
+		//If there is only a piece collision, then we check to see whether the collision is entirely to one
+		//side of the original piece. If so, we try to kick it away from the collision, which succeeds if 
+		//the kicked piece isn't out of bounds or in another piece.
+		//If the collision isn't entirely to one side, then the rotation isn't possible.
+		else if (!outOfBounds && pieceCollision) {
+			
+			//If the collision happened only on one side of the active piece
+			if (!subsquareCollisionList.hasSameCollisionType()) {
+				rotationSuccessful = false;
+			}
+			
+			else {
+				boolean kickable = false;  //Worst case: piece doesn't rotate.
+				Vec2D offset = new Vec2D(getCollisionKickVector(subsquareCollisionList));
+				for (int i = 0; i < 4; ++i)
+					rotatedPoint[i].add(offset);
+				kickable = !theBoard.checkPieceCollision(rotatedPoint) && theBoard.isPieceInBounds(rotatedPoint);
+				
+				rotationSuccessful = kickable;
+			}
+			
+		}
+		
+		
 		if (rotationSuccessful)
 			setPiece(rotatedPoint, this.type);
 		else
 			setPiece(originalPiece, this.type);
 		
-		return true;
+		return rotationSuccessful;
 	}
 	
 	

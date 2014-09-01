@@ -10,4 +10,8 @@ public class Vec2D extends Point {
 		super(x,y);
 	}
 	
+	public Vec2D(Vec2D v) {
+		x = v.x;
+		y = v.y;
+	}
 }
