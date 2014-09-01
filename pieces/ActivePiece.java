@@ -436,6 +436,7 @@ public class ActivePiece {
 		//Point mostOutstandingSubsquare = new Point(0,0); //Keep track of the subsquare that's the farthest out of bounds.
 		SubsquareCollisionList subsquareCollisionList = new SubsquareCollisionList(); //Keep track of piece collisions
 		SubsquareCollisionList subsquareOOBList = new SubsquareCollisionList(); //Keep track of out of bounds collisions
+		
 		boolean outOfBounds = false;
 		boolean pieceCollision = false;
 		boolean rotationSuccessful = true;
