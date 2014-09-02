@@ -1,14 +1,18 @@
 package logic;
 
+import java.util.List;
 import java.util.Random;
-import java.util.Collection;
 import java.util.ArrayList;
+
 import org.newdawn.slick.Color;
 import org.newdawn.slick.GameContainer;
 import org.newdawn.slick.Graphics;
+
 import pieces.ActivePiece;
 import pieces.GameBoardSquare;
 import point.Point;
+import point.Vec2D;
+import tetrisgame.TetrisGame;
 
 /**
  * GameBoard represents the playing area. Used for collision detection, moving pieces, deleting rows, etc.
@@ -71,6 +75,25 @@ public class GameBoard {
 		activePiece = new ActivePiece(this);
 		RNG 		= new Random();
 	}
+	
+	
+	
+	
+	private Vec2D boardToScreenOriginVector(GameContainer container) {
+		Point screenCenter = new Point(container.getWidth()/2, container.getHeight()/2);
+		int hbw            = (TetrisGame.pieceSize*TetrisGame.blockWidth)/2;
+		int hbh            = (TetrisGame.pieceSize*TetrisGame.blockHeight)/2;
+		Point topLeftBoard = new Point(screenCenter.x - hbw, screenCenter.y - hbh);
+		
+		//Get the vector that translates the origin of the visible game area to the origin of the
+		//	on-screen playing area.
+		//For instance, if there are two invisible rows, and we want the game area to have a blockHeight of
+		//	10 (a total of 12 rows), then the 0th row and the 1st row are invisible. The rows 2 through 11 are visible. So, we
+		//	want to map (2,0) (2nd row, 0th column) to the on-screen playing area's origin (i.e., topLeftBoard).
+		Vec2D originOffset = new Vec2D(topLeftBoard.x, topLeftBoard.y - TetrisGame.numInvisRows * TetrisGame.pieceSize);
+		return originOffset;
+	}
+	
 	
 	
 	
@@ -337,12 +360,12 @@ public class GameBoard {
 	
 	
 	//Finish this method
-	public int clearRows() {
+	public void clearRows(GameContainer container) {
 		
 		//check the whole board for completed rows
 		//Store the row indices in a 4-dimensional array (we can only have 
 		//	a maximum of 4 rows deleted at once.)
-		Collection<Integer> deletedRows = new ArrayList<Integer>(4);
+		List<Integer> deletedRows = new ArrayList<Integer>(4);
 		for (int i = 0; i < rows; ++i) {
 			boolean fullRow = true;
 			for (int j = 0; j < cols; ++j) {
@@ -354,17 +377,61 @@ public class GameBoard {
 				deletedRows.add(i);
 		}
 		
-		//Now, we animate the row deletion. Oh boy.
+		if (deletedRows.isEmpty())
+			return;
 		
-		return 0;
+		//Now, we animate the row deletion.
+		
+		//For now, just do a blocking animation instead of a non-blocking one for simplicity.
+		/* General animation algorithm:
+		 * 
+		 * 1) Erase the empty rows from the screen and clear them from the board.
+		 * 
+		 * 2) Partition the board into chunks separated by empty rows. Clear all the chunks off the board (but not the screen)
+		 * except for the bottom chunk.
+		 * 
+		 * 3) Get the bounding rectangle for the bottom chunk in screen space coordinates.
+		 * 
+		 * Each frame of animation:
+		 * 4) Apply the position function s(t) = 1/2at^2 + v_0*t + s_0 to each chunk in screen space, where t
+		 * 	  is the time since the beginning of the last animation frame, and v_0 = 0.
+		 *	 (Won't work in logic space because it uses ints only.)
+		 * 
+		 * 5) Keep doing this until the bottom chunk is in the bounding rectangle. Make sure to realign the
+		 *	  chunk to account for floating point imprecision, and set the chunk on the board again.
+		 *
+		 * 6) Update the bounding rectangle to include the new chunk, and set the "chunk pointer" to the
+		 * 	  next-highest chunk. Repeat until all the chunks are animated.
+		 */
+		
+		//Clear empty rows from the board.
+		for (Integer rowIndex : deletedRows) {
+			System.out.println("Row index: " + rowIndex.intValue());
+			for (int colIndex = 0; colIndex < this.cols; ++colIndex)
+				clearSquare(rowIndex.intValue(), colIndex);
+		}
+		
+		//Get the "collision line" that falling chunks cannot go below. This is the top line of the bounding rectangles
+		//(we don't actually need bounding rectangles, only the top line of them). The falling chunk that is lowest to the floor will hit this
+		//collision line, and then we update the collision line to be the top of that chunk which has just landed. The other falling chunks will hit
+		//this line, and so on, until all the chunks have fallen.
+		
+		int collisionLine = 0; // this is the y component in screen space
+		Vec2D originOffset = boardToScreenOriginVector(container);
+		for (Integer rowIndex : deletedRows) {
+			int colLineBoardIndex = rowIndex.intValue() + 1;
+			collisionLine = GameBoardSquare.boardToScreen(colLineBoardIndex, 0, originOffset).y;
+		}
 	}
 	
 	
 	
 	public void render(GameContainer container, Graphics g) {
+		
+		Vec2D boardToScreenOffset = boardToScreenOriginVector(container);
 		for (int i=0; i<rows; ++i) {
 			for (int j=0; j<cols; ++j)
-				gameBoard[i][j].render(container, g, i, j);
+				gameBoard[i][j].render(g, i, j, boardToScreenOffset);
 		}
 	}
 	

@@ -1,7 +1,7 @@
 package pieces;
 
 import org.newdawn.slick.Color;
-import org.newdawn.slick.GameContainer;
+//import org.newdawn.slick.GameContainer;
 import org.newdawn.slick.Graphics;
 
 import point.Point;
@@ -72,28 +72,16 @@ public class GameBoardSquare {
 	}
 	
 	
-	public Point boardToScreen(int row, int col, GameContainer container) {
+	public static Point boardToScreen(int row, int col, Vec2D originOffsetVector) {
 		
-		Point screenCenter = new Point(container.getWidth()/2, container.getHeight()/2);
-		int hbw            = (TetrisGame.pieceSize*TetrisGame.blockWidth)/2;
-		int hbh            = (TetrisGame.pieceSize*TetrisGame.blockHeight)/2;
-		Point topLeftBoard = new Point(screenCenter.x - hbw, screenCenter.y - hbh);
-		
-		//Get the vector that translates the origin of the visible game area to the origin of the
-		//	on-screen playing area.
-		//For instance, if there are two invisible rows, and we want the game area to have a blockHeight of
-		//	10 (a total of 12 rows), then the 0th row and the 1st row are invisible. The rows 2 through 11 are visible. So, we
-		//	want to map (2,0) (2nd row, 0th column) to the on-screen playing area's origin (i.e., topLeftBoard).
-		
-		Vec2D originOffset = new Vec2D(topLeftBoard.x, topLeftBoard.y - TetrisGame.numInvisRows * TetrisGame.pieceSize);
-		int screenX = originOffset.x + col * TetrisGame.pieceSize;
-		int screenY = originOffset.y + row * TetrisGame.pieceSize;
+		int screenX = originOffsetVector.x + col * TetrisGame.pieceSize;
+		int screenY = originOffsetVector.y + row * TetrisGame.pieceSize;
 		
 		return new Point(screenX,screenY);
 	}
 	
 	
-	public void render(GameContainer container, Graphics g, int row, int col) {
+	public void render(Graphics g, int row, int col, Vec2D originOffsetVector) {
 		
 		//Don't render the invisible rows
 		if (row < TetrisGame.numInvisRows)
@@ -102,7 +90,7 @@ public class GameBoardSquare {
 		if (isSet) {
 			g.setColor(color);
 			int size = TetrisGame.pieceSize;
-			Point p  = boardToScreen(row, col, container);
+			Point p  = boardToScreen(row, col, originOffsetVector);
 			g.fillRect(p.x, p.y, size, size);
 		}
 	}

@@ -55,7 +55,7 @@ public class TetrisGame extends BasicGame {
 		try {
 			tetrisTheme = new Music(new String("sounds//SMB-X.XM"));
 			//tetrisTheme.loop();
-			tetrisTheme.setVolume(0.05f);
+			tetrisTheme.setVolume(0.2f);
 		}
 		catch(SlickException e) {
 			e.printStackTrace();
@@ -144,6 +144,7 @@ public class TetrisGame extends BasicGame {
 			long currentTime = System.nanoTime();
 			if ((currentTime - baseTime)/1000000000 > 1 || moveNow == true) {
 				if (!theBoard.getActivePiece().move(MoveType.MOVE_DOWN, moveAmount)){
+					theBoard.clearRows(container);
 					if (!theBoard.spawnPiece())
 						gameOver = true;
 				}
