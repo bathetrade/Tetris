@@ -1,7 +1,11 @@
 package timer;
 
 public class Timer {
+	
 	private long baseTime     = -1;
+	private long currentTime  = -1;
+	private long prevTime     = -1;
+	private long deltaTime    = -0;
 	private long totalTime    = 0;
 	private boolean isRunning = false;
 	
@@ -20,8 +24,20 @@ public class Timer {
 	public void start() {
 		isRunning = true;
 		baseTime = System.nanoTime();
+		prevTime = baseTime;
 	}
 	
+	
+	
+	
+	public void tick() {
+		if (!isRunning)
+			return;
+		
+		currentTime = System.nanoTime();
+		deltaTime   = currentTime - prevTime;
+		prevTime    = currentTime;
+	}
 	
 	
 	
@@ -54,6 +70,10 @@ public class Timer {
 	}
 	
 	
+	
+	public long getDeltaTime() {
+		return deltaTime;
+	}
 	
 	
 	

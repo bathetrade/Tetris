@@ -72,16 +72,16 @@ public class GameBoardSquare {
 	}
 	
 	
-	public static Point boardToScreen(int row, int col, Vec2D originOffsetVector) {
+	public static Point boardToScreen(int row, int col) {
 		
-		int screenX = originOffsetVector.x + col * TetrisGame.pieceSize;
-		int screenY = originOffsetVector.y + row * TetrisGame.pieceSize;
+		int screenX = TetrisGame.boardToScreenOffsetVector.x + col * TetrisGame.pieceSize;
+		int screenY = TetrisGame.boardToScreenOffsetVector.y + row * TetrisGame.pieceSize;
 		
 		return new Point(screenX,screenY);
 	}
 	
 	
-	public void render(Graphics g, int row, int col, Vec2D originOffsetVector) {
+	public void render(Graphics g, int row, int col) {
 		
 		//Don't render the invisible rows
 		if (row < TetrisGame.numInvisRows)
@@ -90,7 +90,7 @@ public class GameBoardSquare {
 		if (isSet) {
 			g.setColor(color);
 			int size = TetrisGame.pieceSize;
-			Point p  = boardToScreen(row, col, originOffsetVector);
+			Point p  = boardToScreen(row, col);
 			g.fillRect(p.x, p.y, size, size);
 		}
 	}

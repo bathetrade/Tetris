@@ -10,6 +10,8 @@ import org.newdawn.slick.Input;
 import org.newdawn.slick.Color;
 import org.newdawn.slick.Music;
 import pieces.GameBoardSquare.MoveType;
+import point.Point;
+import point.Vec2D;
 
 public class TetrisGame extends BasicGame {
 
@@ -20,17 +22,44 @@ public class TetrisGame extends BasicGame {
 	private Timer timer                     = null;
 	private  boolean gameOver               = false;
 	private long baseTime                   = 0;
+	public static final int windowWidth     = 800;
+	public static final int windowHeight    = 600;
 	public static final int pieceSize       = 24;   //Size of a Tetris piece's "sub square"
 	public static final int blockWidth      = 10;   //Width of playing area in blocks
 	public static final int blockHeight     = 20;   //Height of playing area in blocks
 	public static final int numInvisRows    = 1;    //Invisible rows at top for extra space
+	public static final Vec2D boardToScreenOffsetVector;
+	
+	//Initialize the vector used to change from "logic space" to screen space 
+	static {
+		Point screenCenter = new Point(windowWidth/2, windowHeight/2);
+		int screenCenterX  = windowWidth / 2;
+		int screenCenterY  = windowHeight / 2;
+		int hbw            = (pieceSize*blockWidth) / 2;
+		int hbh            = (pieceSize*blockHeight) / 2;
+		int topLeftBoardX  = screenCenterX - hbw;
+		int topLeftBoardY  = screenCenterY - hbh;
+		
+		//Get the vector that translates the origin of the visible game area to the origin of the
+		//	on-screen playing area.
+		//For instance, if there are two invisible rows, and we want the game area to have a blockHeight of
+		//	10 (a total of 12 rows), then the 0th row and the 1st row are invisible. The rows 2 through 11 are visible. So, we
+		//	want to map (2,0) (2nd row, 0th column) to the on-screen playing area's origin (i.e., topLeftBoard).
+		boardToScreenOffsetVector = new Vec2D(topLeftBoardX, topLeftBoardY - numInvisRows * pieceSize);
+	}
+	
+	
+	
 	
 	public TetrisGame(String title) {
 		super(title);
 		theBoard = new GameBoard(blockHeight + numInvisRows, blockWidth);
 		timer    = new Timer();
 	}
-
+	
+	
+	
+	
 	@Override
 	public void render(GameContainer container, Graphics g)
 			throws SlickException {
@@ -47,7 +76,10 @@ public class TetrisGame extends BasicGame {
 		theBoard.render(container, g);
 		
 	}
-
+	
+	
+	
+	
 	@Override
 	public void init(GameContainer container) throws SlickException {
 		
@@ -72,9 +104,6 @@ public class TetrisGame extends BasicGame {
 		timer.start();
 		baseTime = System.nanoTime();
 		
-		//Initialize the gameboard (it needs the container to get the logic space to screen space vector
-		theBoard.init(container);
-		
 		//Spawn first piece
 		if (!theBoard.spawnPiece()) {
 			System.out.println("This should never happen");
@@ -82,6 +111,8 @@ public class TetrisGame extends BasicGame {
 		}
 	}
 
+	
+	
 	
 	@Override
 	public void update(GameContainer container, int delta)
@@ -163,6 +194,9 @@ public class TetrisGame extends BasicGame {
 			container.exit();
 		}
 		
-	}	
-
+	}
+	
+	
+	
+	
 }

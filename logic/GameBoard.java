@@ -26,14 +26,12 @@ public class GameBoard {
 	//Animation stuff..put in class later
 	private boolean clearRowsFlag;
 	private boolean firstAnimationFrame = true;
-	private List<Integer> collisionLines;
 	private int currentCollisionLine;
 	private Timer animationTimer;
-	
+	private List<Point2f> subsquaresScreenspace; //A list of subsquares on the board for the row-deletion animation
+
 	private float test = 0f;
 	private GameBoardSquare[][] gameBoard;  //Gameboard in "logic space," i.e., a matrix of booleans
-	private List<Point2f> subsquaresScreenspace; //A list of subsquares on the board for the row-deletion animation
-	private Vec2D boardToScreenOriginOffsetVector;
 	private ActivePiece activePiece;   
 	private Random RNG = null;
 	public enum PieceType {
@@ -89,28 +87,9 @@ public class GameBoard {
 		
 		//Animation stuff
 		subsquaresScreenspace = new ArrayList<Point2f>(this.rows * this.cols); //Reserve enough space for each subsquare on the board
-		collisionLines        = new ArrayList<Integer>(4);
 		clearRowsFlag         = false;
 		currentCollisionLine  = 0;
 		
-	}
-	
-	
-	
-	
-	private Vec2D boardToScreenOriginVector(GameContainer container) {
-		Point screenCenter = new Point(container.getWidth()/2, container.getHeight()/2);
-		int hbw            = (TetrisGame.pieceSize*TetrisGame.blockWidth)/2;
-		int hbh            = (TetrisGame.pieceSize*TetrisGame.blockHeight)/2;
-		Point topLeftBoard = new Point(screenCenter.x - hbw, screenCenter.y - hbh);
-		
-		//Get the vector that translates the origin of the visible game area to the origin of the
-		//	on-screen playing area.
-		//For instance, if there are two invisible rows, and we want the game area to have a blockHeight of
-		//	10 (a total of 12 rows), then the 0th row and the 1st row are invisible. The rows 2 through 11 are visible. So, we
-		//	want to map (2,0) (2nd row, 0th column) to the on-screen playing area's origin (i.e., topLeftBoard).
-		Vec2D originOffset = new Vec2D(topLeftBoard.x, topLeftBoard.y - TetrisGame.numInvisRows * TetrisGame.pieceSize);
-		return originOffset;
 	}
 	
 	
@@ -152,7 +131,7 @@ public class GameBoard {
 //				for (int i = lastRowIndex+1; i < rowIndex.intValue(); ++i) {
 //					for (int j = 0; j < this.cols; ++j) {
 //						if (gameBoard[i][j].isSet()) {
-//							Point p = GameBoardSquare.boardToScreen(i, j, boardToScreenOriginOffsetVector);
+//							Point p = GameBoardSquare.boardToScreen(i, j);
 //							subsquaresScreenspace.add(new Point2f(p.x, p.y));
 //							clearSquare(i,j);
 //						}
@@ -160,17 +139,12 @@ public class GameBoard {
 //					
 //				}
 //				
-//				lastRowIndex = rowIndex.intValue();
-//				
-//				//Get collision lines
-//				int collisionLineYValue = GameBoardSquare.boardToScreen(lastRowIndex, 0, boardToScreenOriginOffsetVector).y;
-//				collisionLines.add(new Integer(collisionLineYValue));
-//				
+//				lastRowIndex = rowIndex.intValue();				
 //			}
 //			
 //			firstAnimationFrame = false;
 //		}
-//		
+		
 		
 		
 		//Test animation
@@ -180,9 +154,11 @@ public class GameBoard {
 		}
 		
 		graphics.fillRect(100, test, 24, 24);
-		
-		double t = Timer.nanoToSeconds(animationTimer.getElapsedTime());
-		test = (float)(0.5d * 1200d * t * t);
+		animationTimer.tick();
+		double dt = Timer.nanoToSeconds(animationTimer.getDeltaTime());
+		double t  = Timer.nanoToSeconds(animationTimer.getElapsedTime());
+		//test = (float)(0.5d * 1200d * t * t);
+		test += (1200d*t) * dt;
 		
 		if (test > container.getHeight()) {
 			clearRowsFlag = false;
@@ -202,16 +178,11 @@ public class GameBoard {
 	
 	
 	
-	public void init(GameContainer container) {
-		boardToScreenOriginOffsetVector = boardToScreenOriginVector(container);
-	}
-	
-	
-	
 	
 	public int getRows() {
 		return this.rows;
 	}
+	
 	
 	
 	
@@ -355,6 +326,7 @@ public class GameBoard {
 	
 	
 	
+	
 	public GameBoardSquare getSquare(int row, int col) {
 		return inBounds(row,col) ? gameBoard[row][col] : null;
 	}
@@ -482,73 +454,6 @@ public class GameBoard {
 	
 	
 	
-	//Finish this method
-	public void clearRows(GameContainer container) {
-		
-		
-		//check the whole board for completed rows
-		//Store the row indices in a 4-dimensional array (we can only have 
-		//	a maximum of 4 rows deleted at once.)
-		List<Integer> deletedRows = new ArrayList<Integer>(4);
-		subsquaresScreenspace.clear();
-		
-		for (int i = 0; i < rows; ++i) {
-			boolean fullRow = true;
-			for (int j = 0; j < cols; ++j) {
-				if (!getSquare(i,j).isSet())
-					fullRow = false;
-			}
-			//If fullRow = true, then we add the row to be deleted.
-			if (fullRow == true)
-				deletedRows.add(i);
-		}
-		
-		if (deletedRows.isEmpty())
-			return;
-		
-		//Now, we animate the row deletion.
-		
-		//For now, just do a blocking animation instead of a non-blocking one for simplicity.
-		/* General animation algorithm:
-		 * 
-		 * 1) Erase the empty rows from the screen and clear them from the board.
-		 * 
-		 * 2) Partition the board into chunks separated by empty rows. Clear all the chunks off the board (but not the screen)
-		 * except for the bottom chunk.
-		 * 
-		 * 3) Get the bounding rectangle for the bottom chunk in screen space coordinates.
-		 * 
-		 * Each frame of animation:
-		 * 4) Apply the position function s(t) = 1/2at^2 + v_0*t + s_0 to each chunk in screen space, where t
-		 * 	  is the time since the beginning of the last animation frame, and v_0 = 0.
-		 *	 (Won't work in logic space because it uses ints only.)
-		 * 
-		 * 5) Keep doing this until the bottom chunk is in the bounding rectangle. Make sure to realign the
-		 *	  chunk to account for floating point imprecision, and set the chunk on the board again.
-		 *
-		 * 6) Update the bounding rectangle to include the new chunk, and set the "chunk pointer" to the
-		 * 	  next-highest chunk. Repeat until all the chunks are animated.
-		 */
-		
-		//Clear empty rows from the board.
-		for (Integer rowIndex : deletedRows)
-			clearRow(rowIndex.intValue());
-		
-		//Get the "collision line" that falling chunks cannot go below. This is the top line of the bounding rectangles
-		//(we don't actually need bounding rectangles, only the top line of them). The falling chunk that is lowest to the floor will hit this
-		//collision line, and then we update the collision line to be the top of that chunk which has just landed. The other falling chunks will hit
-		//this line, and so on, until all the chunks have fallen.
-		
-		int collisionLine = 0; // this is the y component in screen space
-		Vec2D originOffset = boardToScreenOriginVector(container);
-		for (Integer rowIndex : deletedRows) {
-			int colLineBoardIndex = rowIndex.intValue() + 1;
-			collisionLine = GameBoardSquare.boardToScreen(colLineBoardIndex, 0, originOffset).y;
-		}
-		
-	}
-	
-	
 	
 	public void render(GameContainer container, Graphics g) {
 		
@@ -557,7 +462,7 @@ public class GameBoard {
 		//Render board normally (using logic space to render into screen space)
 		for (int i=0; i<rows; ++i) {
 			for (int j=0; j<cols; ++j)
-				gameBoard[i][j].render(g, i, j, boardToScreenOriginOffsetVector);
+				gameBoard[i][j].render(g, i, j);
 		}
 		
 		//If it's time to clear the rows, then render the board specially.
