@@ -72,6 +72,9 @@ public class TetrisGame extends BasicGame {
 		timer.start();
 		baseTime = System.nanoTime();
 		
+		//Initialize the gameboard (it needs the container to get the logic space to screen space vector
+		theBoard.init(container);
+		
 		//Spawn first piece
 		if (!theBoard.spawnPiece()) {
 			System.out.println("This should never happen");
@@ -113,7 +116,7 @@ public class TetrisGame extends BasicGame {
 						if (!theBoard.spawnPiece())
 							gameOver = true;
 					}
-					baseTime  = System.nanoTime(); //Reset timer
+					timer.reset();
 					isKeyDown = true;
 				}
 			}
@@ -145,14 +148,13 @@ public class TetrisGame extends BasicGame {
 			else isKeyDown = false;
 		
 			//Check timer to see if it's time to move the active piece down
-			long currentTime = System.nanoTime();
-			if ((currentTime - baseTime)/1000000000 > 1 || moveNow == true) {
+			if (Timer.nanoToSeconds(timer.getElapsedTime()) > 1 || moveNow == true) {
 				if (!theBoard.getActivePiece().move(MoveType.MOVE_DOWN, moveAmount)){
 					theBoard.setClearRowsFlag(true);
 					if (!theBoard.spawnPiece())
 						gameOver = true;
 				}
-				baseTime = currentTime;
+				timer.reset();
 			}
 		}
 		

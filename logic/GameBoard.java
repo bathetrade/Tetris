@@ -10,25 +10,30 @@ import org.newdawn.slick.Graphics;
 
 import pieces.ActivePiece;
 import pieces.GameBoardSquare;
-import point.Point;
-import point.Vec2D;
+import point.*;
 import tetrisgame.TetrisGame;
 import timer.Timer;
 
 /**
  * GameBoard represents the playing area. Used for collision detection, moving pieces, deleting rows, etc.
- * @author Derek
  *
  */
 public class GameBoard {
 	
 	private int rows;
 	private int cols;
+	
+	//Animation stuff..put in class later
 	private boolean clearRowsFlag;
 	private boolean firstAnimationFrame = true;
-	Timer animationTimer;
+	private List<Integer> collisionLines;
+	private int currentCollisionLine;
+	private Timer animationTimer;
+	
 	private float test = 0f;
-	private GameBoardSquare[][] gameBoard;  //GameBoard :)
+	private GameBoardSquare[][] gameBoard;  //Gameboard in "logic space," i.e., a matrix of booleans
+	private List<Point2f> subsquaresScreenspace; //A list of subsquares on the board for the row-deletion animation
+	private Vec2D boardToScreenOriginOffsetVector;
 	private ActivePiece activePiece;   
 	private Random RNG = null;
 	public enum PieceType {
@@ -78,9 +83,16 @@ public class GameBoard {
 			for (int j = 0; j < this.cols; ++j)
 				gameBoard[i][j] = new GameBoardSquare();
 		}
-		clearRowsFlag = false;
-		activePiece   = new ActivePiece(this);
-		RNG 		  = new Random();
+		
+		activePiece           = new ActivePiece(this);
+		RNG 		          = new Random();
+		
+		//Animation stuff
+		subsquaresScreenspace = new ArrayList<Point2f>(this.rows * this.cols); //Reserve enough space for each subsquare on the board
+		collisionLines        = new ArrayList<Integer>(4);
+		clearRowsFlag         = false;
+		currentCollisionLine  = 0;
+		
 	}
 	
 	
@@ -105,6 +117,62 @@ public class GameBoard {
 	
 	
 	private void playRowClearAnimation(GameContainer container, Graphics graphics) {
+		
+//		//Todo: put all this crap in a class later
+//		if (firstAnimationFrame) {
+//			
+//			animationTimer.start();
+//			
+//			//Clear the deleted rows from the board
+//			//Get the collision lines in screen space (to stop a chunk from falling forever)
+//			List<Integer> deletedRows = new ArrayList<Integer>(4);
+//			boolean fullRow;
+//			for (int i = 0; i < this.rows; ++i) {
+//				fullRow = true;
+//				for (int j = 0; j < this.cols; ++j) {
+//					if (!gameBoard[i][j].isSet())
+//						fullRow = false;
+//				}
+//				
+//				if (fullRow) {
+//					deletedRows.add(new Integer(i));
+//					clearRow(i);
+//				}
+//			}
+//		
+//		
+//			//Add all the subsquares-to-be-animated to the subsquaresScreenspace list
+//			//Iterate over the "chunks" between deleted rows
+//			int lastRowIndex = -1;
+//			for (Integer rowIndex : deletedRows) {
+//				
+//				//Add all the falling chunks to the subsquaresScreenspace list (in screen space)
+//				//Clear the chunks off the board before they fall
+//				//Convert the deleted row indices to "collision lines" in screen space
+//				for (int i = lastRowIndex+1; i < rowIndex.intValue(); ++i) {
+//					for (int j = 0; j < this.cols; ++j) {
+//						if (gameBoard[i][j].isSet()) {
+//							Point p = GameBoardSquare.boardToScreen(i, j, boardToScreenOriginOffsetVector);
+//							subsquaresScreenspace.add(new Point2f(p.x, p.y));
+//							clearSquare(i,j);
+//						}
+//					}
+//					
+//				}
+//				
+//				lastRowIndex = rowIndex.intValue();
+//				
+//				//Get collision lines
+//				int collisionLineYValue = GameBoardSquare.boardToScreen(lastRowIndex, 0, boardToScreenOriginOffsetVector).y;
+//				collisionLines.add(new Integer(collisionLineYValue));
+//				
+//			}
+//			
+//			firstAnimationFrame = false;
+//		}
+//		
+		
+		
 		//Test animation
 		if (firstAnimationFrame) {
 			animationTimer.start();
@@ -113,7 +181,7 @@ public class GameBoard {
 		
 		graphics.fillRect(100, test, 24, 24);
 		
-		double t = animationTimer.nanoToSeconds(animationTimer.getElapsedTime());
+		double t = Timer.nanoToSeconds(animationTimer.getElapsedTime());
 		test = (float)(0.5d * 1200d * t * t);
 		
 		if (test > container.getHeight()) {
@@ -131,6 +199,13 @@ public class GameBoard {
 	public void update() {
 		
 	}
+	
+	
+	
+	public void init(GameContainer container) {
+		boardToScreenOriginOffsetVector = boardToScreenOriginVector(container);
+	}
+	
 	
 	
 	
@@ -327,6 +402,15 @@ public class GameBoard {
 	
 	
 	
+	public void clearRow(int row) {
+		for (int col = 0; col < this.cols; ++col) {
+			clearSquare(row, col);
+		}
+	}
+	
+	
+	
+	
 	public void clearSquare(int row, int col) {
 		if (inBounds(row,col))
 			gameBoard[row][col].clearSquare();
@@ -406,6 +490,8 @@ public class GameBoard {
 		//Store the row indices in a 4-dimensional array (we can only have 
 		//	a maximum of 4 rows deleted at once.)
 		List<Integer> deletedRows = new ArrayList<Integer>(4);
+		subsquaresScreenspace.clear();
+		
 		for (int i = 0; i < rows; ++i) {
 			boolean fullRow = true;
 			for (int j = 0; j < cols; ++j) {
@@ -445,11 +531,8 @@ public class GameBoard {
 		 */
 		
 		//Clear empty rows from the board.
-		for (Integer rowIndex : deletedRows) {
-			System.out.println("Row index: " + rowIndex.intValue());
-			for (int colIndex = 0; colIndex < this.cols; ++colIndex)
-				clearSquare(rowIndex.intValue(), colIndex);
-		}
+		for (Integer rowIndex : deletedRows)
+			clearRow(rowIndex.intValue());
 		
 		//Get the "collision line" that falling chunks cannot go below. This is the top line of the bounding rectangles
 		//(we don't actually need bounding rectangles, only the top line of them). The falling chunk that is lowest to the floor will hit this
@@ -469,15 +552,17 @@ public class GameBoard {
 	
 	public void render(GameContainer container, Graphics g) {
 		
-		Vec2D boardToScreenOffset = boardToScreenOriginVector(container);
+		
+		
+		//Render board normally (using logic space to render into screen space)
 		for (int i=0; i<rows; ++i) {
 			for (int j=0; j<cols; ++j)
-				gameBoard[i][j].render(g, i, j, boardToScreenOffset);
+				gameBoard[i][j].render(g, i, j, boardToScreenOriginOffsetVector);
 		}
 		
-		if (clearRowsFlag) {
+		//If it's time to clear the rows, then render the board specially.
+		if (clearRowsFlag)
 			playRowClearAnimation(container, container.getGraphics());
-		}
 		
 	}
 	
