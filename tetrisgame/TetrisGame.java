@@ -1,6 +1,7 @@
 package tetrisgame;
 
 import logic.GameBoard;
+import timer.Timer;
 import org.newdawn.slick.BasicGame;
 import org.newdawn.slick.GameContainer;
 import org.newdawn.slick.Graphics;
@@ -16,6 +17,7 @@ public class TetrisGame extends BasicGame {
 	private Music tetrisTheme               = null;
 	private boolean isKeyDown 				= false;
 	private GameBoard theBoard				= null;
+	private Timer timer                     = null;
 	private  boolean gameOver               = false;
 	private long baseTime                   = 0;
 	public static final int pieceSize       = 24;   //Size of a Tetris piece's "sub square"
@@ -26,6 +28,7 @@ public class TetrisGame extends BasicGame {
 	public TetrisGame(String title) {
 		super(title);
 		theBoard = new GameBoard(blockHeight + numInvisRows, blockWidth);
+		timer    = new Timer();
 	}
 
 	@Override
@@ -66,6 +69,7 @@ public class TetrisGame extends BasicGame {
 		container.setShowFPS(true);
 		
 		//Initialize primitive timer
+		timer.start();
 		baseTime = System.nanoTime();
 		
 		//Spawn first piece
@@ -80,7 +84,7 @@ public class TetrisGame extends BasicGame {
 	public void update(GameContainer container, int delta)
 			throws SlickException {
 		
-		boolean moveNow       = false; //Override default piece timer
+		boolean moveNow = false; //Override default piece timer
 		int moveAmount = 1;
 		
 		//Check input
@@ -144,14 +148,11 @@ public class TetrisGame extends BasicGame {
 			long currentTime = System.nanoTime();
 			if ((currentTime - baseTime)/1000000000 > 1 || moveNow == true) {
 				if (!theBoard.getActivePiece().move(MoveType.MOVE_DOWN, moveAmount)){
-					theBoard.clearRows(container);
+					theBoard.setClearRowsFlag(true);
 					if (!theBoard.spawnPiece())
 						gameOver = true;
 				}
 				baseTime = currentTime;
-//				theBoard.printBoard();
-//				System.out.println("..............................");
-//				System.out.println("..............................");
 			}
 		}
 		

@@ -13,6 +13,7 @@ import pieces.GameBoardSquare;
 import point.Point;
 import point.Vec2D;
 import tetrisgame.TetrisGame;
+import timer.Timer;
 
 /**
  * GameBoard represents the playing area. Used for collision detection, moving pieces, deleting rows, etc.
@@ -23,6 +24,10 @@ public class GameBoard {
 	
 	private int rows;
 	private int cols;
+	private boolean clearRowsFlag;
+	private boolean firstAnimationFrame = true;
+	Timer animationTimer;
+	private float test = 0f;
 	private GameBoardSquare[][] gameBoard;  //GameBoard :)
 	private ActivePiece activePiece;   
 	private Random RNG = null;
@@ -63,17 +68,19 @@ public class GameBoard {
 	
 	public GameBoard(int rows, int cols) {
 		
-		this.rows = Math.abs(rows);
-		this.cols = Math.abs(cols);
-		gameBoard = new GameBoardSquare[this.rows][this.cols];
+		this.rows      = Math.abs(rows);
+		this.cols      = Math.abs(cols);
+		gameBoard      = new GameBoardSquare[this.rows][this.cols];
+		animationTimer = new Timer();
 		
 		//Create each GameBoardSquare on the game board
 		for (int i = 0; i < this.rows; ++i) {
 			for (int j = 0; j < this.cols; ++j)
 				gameBoard[i][j] = new GameBoardSquare();
 		}
-		activePiece = new ActivePiece(this);
-		RNG 		= new Random();
+		clearRowsFlag = false;
+		activePiece   = new ActivePiece(this);
+		RNG 		  = new Random();
 	}
 	
 	
@@ -92,6 +99,30 @@ public class GameBoard {
 		//	want to map (2,0) (2nd row, 0th column) to the on-screen playing area's origin (i.e., topLeftBoard).
 		Vec2D originOffset = new Vec2D(topLeftBoard.x, topLeftBoard.y - TetrisGame.numInvisRows * TetrisGame.pieceSize);
 		return originOffset;
+	}
+	
+	
+	
+	
+	private void playRowClearAnimation(GameContainer container, Graphics graphics) {
+		//Test animation
+		if (firstAnimationFrame) {
+			animationTimer.start();
+			firstAnimationFrame = false;
+		}
+		
+		graphics.fillRect(100, test, 24, 24);
+		
+		double t = animationTimer.nanoToSeconds(animationTimer.getElapsedTime());
+		test = (float)(0.5d * 1200d * t * t);
+		
+		if (test > container.getHeight()) {
+			clearRowsFlag = false;
+			firstAnimationFrame = true;
+			animationTimer.stop();
+			animationTimer.reset();
+			test = 0;
+		}
 	}
 	
 	
@@ -275,6 +306,14 @@ public class GameBoard {
 	
 	
 	
+	
+	public void setClearRowsFlag(boolean clearRowsFlag) {
+		this.clearRowsFlag = clearRowsFlag;
+	}
+	
+	
+	
+	
 	public boolean setSquare(int row, int col, Color color) {
 		return !inBounds(row,col) ? false : gameBoard[row][col].setSquare(color);
 	}
@@ -329,7 +368,7 @@ public class GameBoard {
 			return activePiece.setPiece(JPiece, type);
 			
 		case PIECE_S:
-			Point[] SPiece =      {new Point(0,hw-1),   new Point(0,hw),
+			Point[] SPiece =      {new Point(0,hw-1), new Point(0,hw),
 							       new Point(1,hw-1), new Point(1,hw-2)};
 			return activePiece.setPiece(SPiece, type);
 			
@@ -361,6 +400,7 @@ public class GameBoard {
 	
 	//Finish this method
 	public void clearRows(GameContainer container) {
+		
 		
 		//check the whole board for completed rows
 		//Store the row indices in a 4-dimensional array (we can only have 
@@ -422,6 +462,7 @@ public class GameBoard {
 			int colLineBoardIndex = rowIndex.intValue() + 1;
 			collisionLine = GameBoardSquare.boardToScreen(colLineBoardIndex, 0, originOffset).y;
 		}
+		
 	}
 	
 	
@@ -433,6 +474,11 @@ public class GameBoard {
 			for (int j=0; j<cols; ++j)
 				gameBoard[i][j].render(g, i, j, boardToScreenOffset);
 		}
+		
+		if (clearRowsFlag) {
+			playRowClearAnimation(container, container.getGraphics());
+		}
+		
 	}
 	
 	
