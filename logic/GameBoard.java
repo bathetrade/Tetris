@@ -1,18 +1,16 @@
 package logic;
 
-import java.util.List;
 import java.util.Random;
-import java.util.ArrayList;
 
 import org.newdawn.slick.Color;
 import org.newdawn.slick.GameContainer;
 import org.newdawn.slick.Graphics;
 
+import animation.RowDeleteAnimation;
+
 import pieces.ActivePiece;
 import pieces.GameBoardSquare;
 import point.*;
-import tetrisgame.TetrisGame;
-import timer.Timer;
 
 /**
  * GameBoard represents the playing area. Used for collision detection, moving pieces, deleting rows, etc.
@@ -23,15 +21,10 @@ public class GameBoard {
 	private int rows;
 	private int cols;
 	
-	//Animation stuff..put in class later
-	private boolean clearRowsFlag;
-	private boolean firstAnimationFrame = true;
-	private int currentCollisionLine;
-	private Timer animationTimer;
-	private List<Point2f> subsquaresScreenspace; //A list of subsquares on the board for the row-deletion animation
+	private boolean animateRowDeleteFlag = false;
 
-	private float test = 0f;
 	private GameBoardSquare[][] gameBoard;  //Gameboard in "logic space," i.e., a matrix of booleans
+	private RowDeleteAnimation animateRowDelete;
 	private ActivePiece activePiece;   
 	private Random RNG = null;
 	public enum PieceType {
@@ -74,7 +67,6 @@ public class GameBoard {
 		this.rows      = Math.abs(rows);
 		this.cols      = Math.abs(cols);
 		gameBoard      = new GameBoardSquare[this.rows][this.cols];
-		animationTimer = new Timer();
 		
 		//Create each GameBoardSquare on the game board
 		for (int i = 0; i < this.rows; ++i) {
@@ -86,94 +78,48 @@ public class GameBoard {
 		RNG 		          = new Random();
 		
 		//Animation stuff
-		subsquaresScreenspace = new ArrayList<Point2f>(this.rows * this.cols); //Reserve enough space for each subsquare on the board
-		clearRowsFlag         = false;
-		currentCollisionLine  = 0;
+		animateRowDelete      = new RowDeleteAnimation(this);
+		animateRowDeleteFlag  = false;
 		
 	}
 	
 	
 	
-	
-	private void playRowClearAnimation(GameContainer container, Graphics graphics) {
-		
-//		//Todo: put all this crap in a class later
-//		if (firstAnimationFrame) {
-//			
-//			animationTimer.start();
-//			
-//			//Clear the deleted rows from the board
-//			//Get the collision lines in screen space (to stop a chunk from falling forever)
-//			List<Integer> deletedRows = new ArrayList<Integer>(4);
-//			boolean fullRow;
-//			for (int i = 0; i < this.rows; ++i) {
-//				fullRow = true;
-//				for (int j = 0; j < this.cols; ++j) {
-//					if (!gameBoard[i][j].isSet())
-//						fullRow = false;
-//				}
-//				
-//				if (fullRow) {
-//					deletedRows.add(new Integer(i));
-//					clearRow(i);
-//				}
-//			}
-//		
-//		
-//			//Add all the subsquares-to-be-animated to the subsquaresScreenspace list
-//			//Iterate over the "chunks" between deleted rows
-//			int lastRowIndex = -1;
-//			for (Integer rowIndex : deletedRows) {
-//				
-//				//Add all the falling chunks to the subsquaresScreenspace list (in screen space)
-//				//Clear the chunks off the board before they fall
-//				//Convert the deleted row indices to "collision lines" in screen space
-//				for (int i = lastRowIndex+1; i < rowIndex.intValue(); ++i) {
-//					for (int j = 0; j < this.cols; ++j) {
-//						if (gameBoard[i][j].isSet()) {
-//							Point p = GameBoardSquare.boardToScreen(i, j);
-//							subsquaresScreenspace.add(new Point2f(p.x, p.y));
-//							clearSquare(i,j);
-//						}
-//					}
-//					
-//				}
-//				
-//				lastRowIndex = rowIndex.intValue();				
-//			}
-//			
-//			firstAnimationFrame = false;
-//		}
-		
-		
-		
-		//Test animation
-		if (firstAnimationFrame) {
-			animationTimer.start();
-			firstAnimationFrame = false;
-		}
-		
-		graphics.fillRect(100, test, 24, 24);
-		animationTimer.tick();
-		double dt = Timer.nanoToSeconds(animationTimer.getDeltaTime());
-		double t  = Timer.nanoToSeconds(animationTimer.getElapsedTime());
-		//test = (float)(0.5d * 1200d * t * t);
-		test += (1200d*t) * dt;
-		
-		if (test > container.getHeight()) {
-			clearRowsFlag = false;
-			firstAnimationFrame = true;
-			animationTimer.stop();
-			animationTimer.reset();
-			test = 0;
-		}
-	}
-	
-	
-	
-	
+	/**
+	 * Checks the board for full rows and sets the animateRowDelete flag to true if there are. This
+	 * method should be called each time a piece lands.
+	 */
 	public void update() {
+		if (animateRowDeleteFlag == false)
+			animateRowDeleteFlag = checkFullRows();
+	}
+	
+	
+	
+	
+	/**
+	 * This method checks to see whether there are any full rows on the board that need to be
+	 * cleared. It checks from the bottom up for efficiency, and returns as soon as it finds a full
+	 * row (i.e., it does not check the entire board).
+	 * @return Returns true if there are rows to be deleted, and false otherwise.
+	 */
+	public boolean checkFullRows() {
+		boolean fullRow;
+		int maxRowIndex = this.rows - 1;
+		int maxColIndex = this.cols - 1;
 		
+		for (int i = maxRowIndex; i >= 0; --i) {
+			fullRow = true;
+			for (int j = maxColIndex; j >= 0; --j) {
+				if (!isSet(i,j)) {
+					fullRow = false;
+					break;
+				}
+			}
+			if (fullRow)
+				return true;
+		}
+		return false;
 	}
 	
 	
@@ -295,6 +241,13 @@ public class GameBoard {
 	
 	
 	
+	public boolean isAnimationPlaying() {
+		return animateRowDeleteFlag;
+	}
+	
+	
+	
+	
 	public boolean isPieceInBoundsLeftRightBottom(Point[] p) {
 		for (int i = 0; i < 4; ++i) {
 			if (!inBoundsLeftRightBottom(p[i].x, p[i].y))
@@ -354,8 +307,8 @@ public class GameBoard {
 	
 	
 	
-	public void setClearRowsFlag(boolean clearRowsFlag) {
-		this.clearRowsFlag = clearRowsFlag;
+	public void startAnimation() {
+		this.animateRowDeleteFlag = true;
 	}
 	
 	
@@ -466,8 +419,9 @@ public class GameBoard {
 		}
 		
 		//If it's time to clear the rows, then render the board specially.
-		if (clearRowsFlag)
-			playRowClearAnimation(container, container.getGraphics());
+		if (animateRowDeleteFlag) {
+			animateRowDeleteFlag = animateRowDelete.play(g);
+		}
 		
 	}
 	

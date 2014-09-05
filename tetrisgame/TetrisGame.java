@@ -10,7 +10,6 @@ import org.newdawn.slick.Input;
 import org.newdawn.slick.Color;
 import org.newdawn.slick.Music;
 import pieces.GameBoardSquare.MoveType;
-import point.Point;
 import point.Vec2D;
 
 public class TetrisGame extends BasicGame {
@@ -21,7 +20,6 @@ public class TetrisGame extends BasicGame {
 	private GameBoard theBoard				= null;
 	private Timer timer                     = null;
 	private  boolean gameOver               = false;
-	private long baseTime                   = 0;
 	public static final int windowWidth     = 800;
 	public static final int windowHeight    = 600;
 	public static final int pieceSize       = 24;   //Size of a Tetris piece's "sub square"
@@ -32,7 +30,6 @@ public class TetrisGame extends BasicGame {
 	
 	//Initialize the vector used to change from "logic space" to screen space 
 	static {
-		Point screenCenter = new Point(windowWidth/2, windowHeight/2);
 		int screenCenterX  = windowWidth / 2;
 		int screenCenterY  = windowHeight / 2;
 		int hbw            = (pieceSize*blockWidth) / 2;
@@ -102,7 +99,6 @@ public class TetrisGame extends BasicGame {
 		
 		//Initialize primitive timer
 		timer.start();
-		baseTime = System.nanoTime();
 		
 		//Spawn first piece
 		if (!theBoard.spawnPiece()) {
@@ -117,6 +113,9 @@ public class TetrisGame extends BasicGame {
 	@Override
 	public void update(GameContainer container, int delta)
 			throws SlickException {
+		
+		if (theBoard.isAnimationPlaying())
+			return;
 		
 		boolean moveNow = false; //Override default piece timer
 		int moveAmount = 1;
@@ -144,6 +143,7 @@ public class TetrisGame extends BasicGame {
 			else if (input.isKeyDown(Input.KEY_DOWN)) {
 				if (!isKeyDown) {
 					if (!theBoard.getActivePiece().move(MoveType.MOVE_DOWN, moveAmount)) {
+						theBoard.update();
 						if (!theBoard.spawnPiece())
 							gameOver = true;
 					}
@@ -181,7 +181,7 @@ public class TetrisGame extends BasicGame {
 			//Check timer to see if it's time to move the active piece down
 			if (Timer.nanoToSeconds(timer.getElapsedTime()) > 1 || moveNow == true) {
 				if (!theBoard.getActivePiece().move(MoveType.MOVE_DOWN, moveAmount)){
-					theBoard.setClearRowsFlag(true);
+					theBoard.update();
 					if (!theBoard.spawnPiece())
 						gameOver = true;
 				}

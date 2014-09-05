@@ -18,16 +18,14 @@ public class RowDeleteAnimation {
 	private int currentCollisionY;
 	private Timer animationTimer;
 	private boolean isFirstFrame;
-	private boolean isPlaying;
 	private GameBoard theBoard;
 	
 	
 	
-	public RowDeleteAnimation(GameBoard theBoard, int numChunks) {
+	public RowDeleteAnimation(GameBoard theBoard) {
 		chunkStack        = new ArrayDeque<Chunk>(5);
 		chunkList         = new ArrayList<Chunk>(5); //max number of possible chunks
 		animationTimer    = new Timer();
-		isPlaying 	      = false;
 		isFirstFrame      = true;
 		currentCollisionY = GameBoardSquare.boardToScreen(theBoard.getRows(), 0).y; //Bottom of the board
 		this.theBoard     = theBoard;
@@ -36,11 +34,56 @@ public class RowDeleteAnimation {
 	
 	
 	
+	private List<Integer> getDeletedRows() {
+		List<Integer> deletedRows = new ArrayList<Integer>(4);
+		int rows = theBoard.getRows();
+		int cols = theBoard.getCols();
+		boolean fullRow;
+		
+		for (int i = 0; i < rows; ++i) {
+			fullRow = true;
+			for (int j = 0; i < cols; ++j) {
+				if (!theBoard.isSet(i,j)) {
+					fullRow = false;
+					break;
+				}
+			}
+			if (fullRow) {
+				deletedRows.add(i);
+				theBoard.clearRow(i);
+			}
+		}
+		return deletedRows;
+	}
+	
+	
+
+	//working on this method
+	private void getChunksAndClearBoard() {
+		int rows = theBoard.getRows();
+		int cols = theBoard.getCols();
+		int topChunkIndex    = -1;
+		int bottomChunkIndex = -1;
+		List<Integer> deletedRows = getDeletedRows();
+		Chunk currentChunk = new Chunk(theBoard);
+		
+		for (int i = 0; i < rows; ++i) {
+			if (deletedRows.contains(i))
+				continue;
+			
+			for (int j = 0; j < cols; ++j) {
+				if (theBoard.isSet(i,j)) {
+					//do stuff
+				}
+			}
+		}
+		
+	}
+	
+	
+	
+	
 	public boolean play(Graphics graphics) {
-		if (isPlaying) 
-			return false;
-		
-		
 		//If it's the first frame of animation, we want to get the algorithm set up.
 		//We begin the animation timer, which is used to calculate the position of the chunks
 		//based on the total elapsed time.
@@ -52,29 +95,13 @@ public class RowDeleteAnimation {
 		if (isFirstFrame) {
 			animationTimer.start();
 			
-			//Clear the rows; log deleted row indices.
+			//Clear the board; log deleted row indices.
 			//Also, snatch the row index of the top of the top-most chunk.
-			int rows = theBoard.getRows();
-			int cols = theBoard.getCols();
-			List<Integer> deletedRows = new ArrayList<Integer>(4);
-			int topHighestChunk = -1;
-			boolean fullRow;
-			for (int i = 0; i < rows; ++i) {
-				fullRow = true;
-				for (int j = 0; j < cols; ++j) {
-					if (!theBoard.isSet(i,j))
-						fullRow = false;
-				}
-				if (fullRow) {
-					theBoard.clearRow(i);
-					deletedRows.add(new Integer(i));
-					if (topHighestChunk == -1)
-						topHighestChunk = i;
-				}
-			}
+			List<Integer> deletedRows = getDeletedRows();
 			
 			
 			//Get all the chunks
+			int topHighestChunk = 0; //placeholder to make red X go away
 			int lastRowIndex = topHighestChunk;
 			for (Integer rowIndex : deletedRows) {
 				int numRows = rowIndex.intValue() - lastRowIndex;
@@ -119,13 +146,17 @@ public class RowDeleteAnimation {
 			//If the chunk goes under the collision line...
 			copy.add(0, (float)deltaHeight);
 			if (copy.y > currentCollisionY) {
-				
+				chunk = chunkStack.removeFirst();
+				chunk.align();
+				currentCollisionY = (int)chunk.getTopChunkScreenSpace();
 			}
 			
 			else {
 				for (Chunk c : chunkStack)
 					c.moveChunk((float)deltaHeight);
 			}
+			
+			return !chunkStack.isEmpty();
 		}
 		
 		

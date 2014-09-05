@@ -5,7 +5,6 @@ import org.newdawn.slick.Color;
 import org.newdawn.slick.Graphics;
 
 import point.Point;
-import point.Vec2D;
 import tetrisgame.TetrisGame;
 
 //This class represents an individual "square" on the game board.
