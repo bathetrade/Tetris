@@ -19,6 +19,11 @@ public class Point2f {
 		y = p.y;
 	}
 	
+	public Point2f(Point p) {
+		x = (float)p.x;
+		y = (float)p.y;
+	}
+	
 	public void set(float x, float y) {
 		this.x = x;
 		this.y = y;

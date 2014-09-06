@@ -5,6 +5,7 @@ import java.util.LinkedList;
 
 import org.newdawn.slick.Graphics;
 
+import point.Point;
 import point.Point2f;
 import logic.GameBoard;
 import pieces.GameBoardSquare;
@@ -12,15 +13,21 @@ import tetrisgame.TetrisGame;
 
 public class Chunk {
 	private Deque<ScreenSpaceSubsquare> subsquareList;
-	private float topChunkScreenSpaceY;    //The y value, in screen space, of the top of the chunk
-	private float bottomChunkScreenSpaceY; 
-	private GameBoard theBoard;
 	
-	public Chunk(GameBoard theBoard) {
+	public Chunk() {
 		subsquareList = new LinkedList<ScreenSpaceSubsquare>();
-		this.theBoard = theBoard;
-		topChunkScreenSpaceY = -1;
-		bottomChunkScreenSpaceY = -1;
+	}
+	
+	
+	/**
+	 * Checks whether a chunk exists on the interval [upperBoundRowIndex, lowerBoundRowIndex).
+	 * @param upperBoundRowIndex - The index of the row containing the top of the chunk in (row,col)
+	 * space (i.e., logic space).
+	 * @param lowerBoundRowIndex - The index of the row of the bottom chunk + 1 in logic space.
+	 * @return Returns a boolean indicating whether the chunk exists.
+	 */
+	public static boolean isEmptyChunk(int upperBoundRowIndex, int lowerBoundRowIndex) {
+		return !(lowerBoundRowIndex > upperBoundRowIndex);
 	}
 	
 	
@@ -32,28 +39,32 @@ public class Chunk {
 	
 	
 	
-	
-	public float getTopChunkScreenSpace() {
-		return topChunkScreenSpaceY;
+	/**
+	 * Calculates the line (i.e., the y value) of the top of the chunk in screen space. Runs in O(1).
+	 * @return Returns -1.0 if the chunk is empty, otherwise, returns the y value of the top of the
+	 * chunk in screen space.
+	 */
+	public float getTopBoundScreenSpace() {
+		if (subsquareList.isEmpty())
+			return -1;
+		
+		return subsquareList.peekLast().getPoint().y;
 	}
-	
-	public float getBottomChunkScreenSpace() {
-		return bottomChunkScreenSpaceY;
-	}
-	
-	
 	
 	/**
-	 * Picks a subsquare from the bottom-most row of the chunk. This is used for determining when
-	 * to stop a falling a chunk (i.e., if the subsquare is below the collision line).
-	 * @return Returns the coordinates of the subsquare. Returns (-1,-1) if the chunk is empty.
+	 * Calculates the line (i.e., the y value) of the bottom of the chunk in screen space. Runs in 
+	 * O(1).
+	 * @return Returns -1.0 if the chunk is empty, otherwise, returns the y value of the bottom of
+	 * the chunk in screen space.
 	 */
-	public Point2f getBottomRowSubsquareRepresentative() {
-		int lastIndex = subsquareList.size() - 1;
-		if (lastIndex < 0)
-			return new Point2f(-1,-1);
-		return subsquareList.peekFirst().getPoint();
+	public float getBottomBoundScreenSpace() {
+		if (subsquareList.isEmpty())
+			return -1;
+		
+		return subsquareList.peekFirst().getPoint().y;
 	}
+	
+	
 	
 	
 	public Deque<ScreenSpaceSubsquare> getSubsquareList() {
@@ -62,51 +73,52 @@ public class Chunk {
 	
 	
 	
-	public void setTopChunkIndex(int row) {
-		topChunkScreenSpaceY = GameBoardSquare.boardToScreen(row, 0).y;
-	}
-	
-	
-	
-	public void setBottomChunkIndex(int row) {
-		bottomChunkScreenSpaceY = GameBoardSquare.boardToScreen(row, 0).y;
+	/**
+	 * Sets the chunk on the game board.
+	 * @param theBoard - the board.
+	 */
+	public void setOnBoard(GameBoard theBoard) {
+		for (ScreenSpaceSubsquare s : subsquareList) {
+			Point2f screenSpace = s.getPoint();
+			Point logicSpace = GameBoardSquare.screenToBoard(screenSpace.x, screenSpace.y);
+			theBoard.setSquare(logicSpace, s.getColor());
+		}
 	}
 	
 	
 	
 	
 	/**
-	 * Creates a chunk on the interval [topRowIndex, bottomRowIndex] by getting all the subsquares
-	 * that are set in the interval and adding them to a list. Stores the top of the chunk and the
-	 * bottom of the chunk in screen space.
-	 * @param topRowIndex - The integer in the interval [0, GameBoard.rows) signifying the top 
-	 * row of the chunk. This is used to store the height of the top of the chunk in screen space,
-	 * which is used to tell the falling chunk above the current chunk when to stop.
-	 * @param bottomRowIndex - The integer in the interval [topRowIndex, GameBoard.rows) signifying the bottom
-	 * row of the chunk. This is used to store the height of the bottom of the chunk in screen space,
-	 * which is used to tell the current falling chunk when to stop.
+	 * Creates a chunk on the interval [upperBound, lowerBound). This chunk is guaranteed
+	 * to be sorted, such that the first subsquare is on the highest row of the chunk, and the last 
+	 * subsquare is on the lowest row.
+	 * @param theBoard - The GameBoard containing the chunks.
+	 * @param lowerBound - The bottom-most row index plus 1 of the chunk in logic space.
+	 * @param upperBound - The top-most row index of the chunk in logic space.
+	 * @return If the chunk is empty, returns an empty chunk. Returns a non-empty chunk otherwise.
 	 */
-	public void createChunk(int topRowIndex, int bottomRowIndex) {
-		if (!subsquareList.isEmpty())
-			subsquareList.clear();
+	public static Chunk createChunkFromBounds(GameBoard theBoard, int lowerBound, int upperBound) {
+		if (isEmptyChunk(lowerBound, upperBound))
+			return new Chunk();
 		
-		topChunkScreenSpaceY = GameBoardSquare.boardToScreen(topRowIndex, 0).y;
-		bottomChunkScreenSpaceY = GameBoardSquare.boardToScreen(bottomRowIndex, 0).y;
-		
-		int cols = theBoard.getCols();
-		for (int i = topRowIndex; i <= bottomRowIndex; ++i) {
-			for (int j = 0; j < cols; ++j) {
-				if (theBoard.isSet(i,j))
-					subsquareList.addFirst(new ScreenSpaceSubsquare(new Point2f(i,j), theBoard.getSquare(i,j).getColor()));
+		Chunk chunk = new Chunk();
+		int numCols = theBoard.getCols();
+		for (int i = upperBound; i < lowerBound; ++i) {
+			for (int j = 0; j < numCols; ++j) {
+				if (theBoard.isSet(i,j)) {
+					Point p = GameBoardSquare.boardToScreen(i, j);
+					chunk.addSubsquare(new ScreenSpaceSubsquare(new Point2f(p), theBoard.getSquare(i,j).getColor()));
+				}
 			}
 		}
+		return chunk;
 	}
 	
 	public void moveChunk(float amount) {
 		for (ScreenSpaceSubsquare s : subsquareList) {
 			s.getPoint().add(0, amount);
-			topChunkScreenSpaceY += amount;
-			bottomChunkScreenSpaceY += amount;
+			//topChunkScreenSpaceY += amount;
+			//bottomChunkScreenSpaceY += amount;
 		}
 	}
 	
@@ -132,8 +144,8 @@ public class Chunk {
 			p.set((float)Math.round(p.x), (float)Math.round(p.y));
 		}
 		
-		topChunkScreenSpaceY = (float)Math.round(topChunkScreenSpaceY);
-		bottomChunkScreenSpaceY = (float)Math.round(bottomChunkScreenSpaceY);
+		//topChunkScreenSpaceY = (float)Math.round(topChunkScreenSpaceY);
+		//bottomChunkScreenSpaceY = (float)Math.round(bottomChunkScreenSpaceY);
 		
 		return true;
 	}

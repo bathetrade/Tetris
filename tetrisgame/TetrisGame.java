@@ -27,7 +27,6 @@ public class TetrisGame extends BasicGame {
 	public static final int blockHeight     = 20;   //Height of playing area in blocks
 	public static final int numInvisRows    = 1;    //Invisible rows at top for extra space
 	public static final Vec2D boardToScreenOffsetVector;
-	
 	//Initialize the vector used to change from "logic space" to screen space 
 	static {
 		int screenCenterX  = windowWidth / 2;

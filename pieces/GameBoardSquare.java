@@ -80,6 +80,20 @@ public class GameBoardSquare {
 	}
 	
 	
+	public static Point screenToBoard(float screenX, float screenY) {
+		
+		//Translate the playing area space to the top left of the entire window.
+		screenX = screenX - TetrisGame.boardToScreenOffsetVector.x;
+		screenY = screenY - TetrisGame.boardToScreenOffsetVector.y;
+		
+		int logicX = Math.round(screenX / TetrisGame.pieceSize);
+		int logicY = Math.round(screenY / TetrisGame.pieceSize);
+		
+		return new Point(logicY, logicX);
+		
+	}
+	
+	
 	public void render(Graphics g, int row, int col) {
 		
 		//Don't render the invisible rows
