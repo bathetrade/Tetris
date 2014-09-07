@@ -85,8 +85,8 @@ public class TetrisGame extends BasicGame {
 		//Initialize sound
 		try {
 			tetrisTheme = new Music(new String("sounds//SMB-X.XM"));
-			//tetrisTheme.loop();
-			tetrisTheme.setVolume(0.2f);
+			tetrisTheme.loop();
+			tetrisTheme.setVolume(0.08f);
 		}
 		catch(SlickException e) {
 			e.printStackTrace();
@@ -141,11 +141,19 @@ public class TetrisGame extends BasicGame {
 			
 			else if (input.isKeyDown(Input.KEY_DOWN)) {
 				if (!isKeyDown) {
+					
+					//If the active piece has landed on something....
 					if (!theBoard.getActivePiece().move(MoveType.MOVE_DOWN, moveAmount)) {
 						theBoard.update();
+						
+						//Don't spawn pieces while the animation is playing (!!!!)
+						if (theBoard.isAnimationPlaying())
+							return;
+						
 						if (!theBoard.spawnPiece())
 							gameOver = true;
 					}
+					
 					timer.reset();
 					isKeyDown = true;
 				}
@@ -181,6 +189,10 @@ public class TetrisGame extends BasicGame {
 			if (Timer.nanoToSeconds(timer.getElapsedTime()) > 1 || moveNow == true) {
 				if (!theBoard.getActivePiece().move(MoveType.MOVE_DOWN, moveAmount)){
 					theBoard.update();
+					
+					if (theBoard.isAnimationPlaying())
+						return;
+					
 					if (!theBoard.spawnPiece())
 						gameOver = true;
 				}
@@ -188,14 +200,13 @@ public class TetrisGame extends BasicGame {
 			}
 		}
 		
+		
+		
 		else {
 			System.out.println("Displaying game over screen");
 			container.exit();
 		}
 		
+		
 	}
-	
-	
-	
-	
 }

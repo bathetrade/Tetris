@@ -27,6 +27,7 @@ public class GameBoard {
 	private RowDeleteAnimation animateRowDelete;
 	private ActivePiece activePiece;   
 	private Random RNG = null;
+	private long randomNum;
 	public enum PieceType {
 
 		PIECE_L,
@@ -76,6 +77,7 @@ public class GameBoard {
 		
 		activePiece           = new ActivePiece(this);
 		RNG 		          = new Random();
+		randomNum             = RNG.nextLong();
 		
 		//Animation stuff
 		animateRowDelete      = new RowDeleteAnimation(this);
@@ -302,6 +304,8 @@ public class GameBoard {
 			}
 			System.out.println();
 		}
+		System.out.println("");
+		System.out.println("");
 	}
 	
 	
@@ -356,6 +360,14 @@ public class GameBoard {
 		
 		//PieceType type = PieceType.PIECE_LINE;
 		PieceType type = PieceType.fromInteger(RNG.nextInt(PieceType.numPieces));
+		
+		randomNum ^= randomNum << 22;
+		randomNum ^= randomNum >>> 35;
+		randomNum ^= randomNum << 4;
+		System.out.println(randomNum);
+		if (randomNum < 0)
+			randomNum *= -1;
+		type = PieceType.fromInteger((int)(randomNum % PieceType.numPieces));
 		
 		//Pieces are specified in logic space. Example of a line:
 		//0 0 0 0 0 0 ....
@@ -413,15 +425,17 @@ public class GameBoard {
 		
 		
 		//Render board normally (using logic space to render into screen space)
-		for (int i=0; i<rows; ++i) {
-			for (int j=0; j<cols; ++j)
-				gameBoard[i][j].render(g, i, j);
+		
+		if (!isAnimationPlaying()) {
+			for (int i=0; i<rows; ++i) {
+				for (int j=0; j<cols; ++j)
+					gameBoard[i][j].render(g, i, j);
+			}
 		}
 		
 		//If it's time to clear the rows, then render the board specially.
-		if (animateRowDeleteFlag) {
+		else 
 			animateRowDeleteFlag = animateRowDelete.play(g);
-		}
 		
 	}
 	

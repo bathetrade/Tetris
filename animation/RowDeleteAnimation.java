@@ -9,17 +9,19 @@ import java.util.ArrayList;
 import org.newdawn.slick.Graphics;
 
 import pieces.GameBoardSquare;
-import point.Point2f;
-import point.Point;
 import logic.GameBoard;
 
 public class RowDeleteAnimation {
 	private List<Chunk> chunkRenderList;
 	private Deque<Chunk> chunkStack;
-	private int currentCollisionY;
+	private float currentCollisionY;
 	private Timer animationTimer;
 	private boolean isFirstFrame;
 	private GameBoard theBoard;
+	
+	//debug
+	double testTime = 0d;
+	double testdt   = 0.05d;
 	
 	
 	
@@ -28,7 +30,7 @@ public class RowDeleteAnimation {
 		chunkRenderList   = new ArrayList<Chunk>(5); //max number of possible chunks
 		animationTimer    = new Timer();
 		isFirstFrame      = true;
-		currentCollisionY = GameBoardSquare.boardToScreen(theBoard.getRows(), 0).y; //Bottom of the board
+		currentCollisionY = GameBoardSquare.boardToScreen(theBoard.getRows()-1, 0).y; //Bottom of the board
 		this.theBoard     = theBoard;
 	}
 	
@@ -43,7 +45,7 @@ public class RowDeleteAnimation {
 		
 		for (int i = 0; i < rows; ++i) {
 			fullRow = true;
-			for (int j = 0; i < cols; ++j) {
+			for (int j = 0; j < cols; ++j) {
 				if (!theBoard.isSet(i,j)) {
 					fullRow = false;
 					break;
@@ -70,29 +72,30 @@ public class RowDeleteAnimation {
 		//board. Each of these intervals optionally contains a chunk.
 		int upperBound = 0; //Initialize to the top of the board
 		for (Integer lowerBound : deletedRows) {
-			
-			//Iterate over each subsquare on the interval and add the set subsquares to the
-			//current chunk.
-			currentChunk = Chunk.createChunkFromBounds(theBoard, lowerBound, upperBound);
-			
+			//currentChunk = Chunk.createChunkFromBounds(theBoard, lowerBound, upperBound, true);
+			currentChunk = new Chunk();
+			currentChunk.createChunkFromBounds(theBoard, lowerBound, upperBound, true);
 			if (!currentChunk.isEmpty()) {
 				chunkStack.add(currentChunk);
 				chunkRenderList.add(currentChunk);
 			}
 			upperBound = lowerBound.intValue() + 1;
-		} //end main loop
+		}
+		
 		
 		//Handle last potential "chunk interval," namely, the chunk between the bottom-most deleted
 		//row and the bottom of the board.
-		if (upperBound < theBoard.getCols()) {
-			currentChunk = Chunk.createChunkFromBounds(theBoard, upperBound, theBoard.getCols());
+		if (upperBound < theBoard.getRows()) {
+			//currentChunk = Chunk.createChunkFromBounds(theBoard, upperBound, theBoard.getRows(), false);
+			currentChunk = new Chunk();
+			currentChunk.createChunkFromBounds(theBoard, upperBound, theBoard.getRows(), false);
 			
 			//We don't add this chunk to the stack because it doesn't need to move.
 			//However, we need to initialize the collision line to the top of this stationary 
 			//bottom-most stack.
 			if (!currentChunk.isEmpty()) {
 				chunkRenderList.add(currentChunk);
-				currentCollisionY = (int)currentChunk.getTopBoundScreenSpace();
+				currentCollisionY = currentChunk.getTopBoundScreenSpace();
 			}
 		}
 		
@@ -100,8 +103,24 @@ public class RowDeleteAnimation {
 	
 	
 	
+	
+	private void moveChunks(float amount) {
+		for (Chunk c : chunkStack)
+			c.moveChunk(amount);
 		
-	public void setChunksOnBoard() {
+	}
+	
+	
+	
+	private void renderChunks(Graphics graphics) {
+		for (Chunk c : chunkRenderList)
+			c.render(graphics);
+	}
+	
+	
+	
+	
+	private void setChunksOnBoard() {
 		for (Chunk c : chunkRenderList) {
 			c.setOnBoard(theBoard);
 		}
@@ -123,7 +142,7 @@ public class RowDeleteAnimation {
 			animationTimer.start();
 			
 			getChunksAndClearBoard();
-			
+			theBoard.printBoard();
 			isFirstFrame = false;
 		}
 		
@@ -140,7 +159,30 @@ public class RowDeleteAnimation {
 		//			imprecision by rounding the subsquares' x and y values to the nearest integer.*****
 		//The animation is done when the chunk stack is empty.
 		else {
-			animationTimer.tick();
+			
+			boolean isAnimationPlaying = !chunkStack.isEmpty();
+			if (!isAnimationPlaying) { //Animation is done
+				System.out.println("Before setting chunks");
+				theBoard.printBoard();
+				setChunksOnBoard();
+				System.out.println("After setting chunks");
+				theBoard.printBoard();
+				renderChunks(graphics);
+				
+				//Reset to initial state
+				isFirstFrame = true;
+				chunkRenderList.clear();
+				chunkStack.clear();
+				animationTimer.stop();
+				animationTimer.reset();
+				currentCollisionY = GameBoardSquare.boardToScreen(theBoard.getRows()-1, 0).y;
+				theBoard.spawnPiece();
+				return false;
+			}
+			
+			
+			animationTimer.tick(); //update dt
+			
 			Chunk chunk = chunkStack.peekFirst();
 			float testSquareY = chunk.getBottomBoundScreenSpace();
 			
@@ -156,24 +198,21 @@ public class RowDeleteAnimation {
 			
 			//If the chunk goes under the collision line, stop the chunk, update the collision line,
 			//and pop the chunk off the stack.
-			testSquareY += deltaHeight;
-			if (testSquareY > currentCollisionY) {
+			if (testSquareY + deltaHeight > currentCollisionY) {
+				deltaHeight = currentCollisionY - testSquareY; //Get the exact amount needed to move the chunk to the collision line
+				moveChunks((float)deltaHeight);
 				chunk = chunkStack.removeFirst();
-				chunk.align();
-				currentCollisionY = (int)chunk.getTopBoundScreenSpace();
+				currentCollisionY = chunk.getTopBoundScreenSpace();
 			}
 			
 			//Otherwise, keep letting the chunks fall...
-			else {
-				for (Chunk c : chunkStack)
-					c.moveChunk((float)deltaHeight);
-			}
+			else
+				moveChunks((float)deltaHeight);
 			
-			return !chunkStack.isEmpty();
+			//renderChunks(graphics);
 		}
 		
-		
-		
+		renderChunks(graphics);
 		return true;
 	}
 	

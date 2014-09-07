@@ -31,7 +31,14 @@ public class ActivePiece {
 	}
 
 
-
+	private boolean isPartOfPiece(int row, int col) {
+		for (int i = 0; i < 4; ++i) {
+			if (row == piece[i].x && col == piece[i].y)
+				return true;
+		}
+		return false;
+	}
+	
 	
 	private boolean isLeftOfPiece(Point subsquare, Point[] piece) {
 		for (int i = 0; i < 4; ++i) {
@@ -308,6 +315,10 @@ public class ActivePiece {
 	 */
 	public boolean move(MoveType type, int numUnits) {
 		
+//		//Necessary to prevent animation bug that happens one frame after the end of the animation
+//		if (hasLanded)
+//			return false;
+		
 		Vec2D moveVector = new Vec2D();
 		switch (type) {
 		
@@ -325,38 +336,66 @@ public class ActivePiece {
 			
 		}
 		
-		//Copy the piece
-		Point[] originalPiece = new Point[4];
-		Point[] movedPiece = new Point[4];
+//		//Copy the piece
+//		Point[] originalPiece = new Point[4];
+//		Point[] movedPiece = new Point[4];
+//		for (int i = 0; i < 4; ++i) {
+//			originalPiece[i] = new Point(this.piece[i]);
+//			movedPiece[i] = new Point(this.piece[i]);
+//		}
+//		
+//		//Clear the active piece from the board (to get it out of the way).
+//		clearPiece();
+//		
+//		//Try moving.
+//		for (int i = 0; i < 4; ++i)
+//			movedPiece[i].add(moveVector);
+//		
+//		//Check whether the moved piece is colliding with anything or out of bounds.
+//		//We don't care if the piece is above the board; only left, right, or below.
+//		//(Otherwise, a line sticking above the top of the board wouldn't move.)
+//		boolean inBounds = theBoard.isPieceInBoundsLeftRightBottom(movedPiece);
+//		boolean pieceCollision = theBoard.checkPieceCollision(movedPiece);
+//		boolean moveSuccessful = inBounds && !pieceCollision;
+//		
+//		if (moveSuccessful) {
+//			setPiece(movedPiece, this.type);
+//			if (type == MoveType.MOVE_DOWN)
+//				hasLanded = false;
+//			return true;
+//		}
+//		
+//		else {
+//			setPiece(originalPiece, this.type);
+//			if (type == MoveType.MOVE_DOWN)
+//				hasLanded = true;
+//			return false;
+//		}
+//
+		
+		//Copy the piece and try moving it
+		Point[] copy = new Point[4];
+		for (int i = 0; i < 4; ++i)
+			copy[i] = new Point(piece[i].x + moveVector.x, piece[i].y + moveVector.y);
+		
+		//Make sure it's in bounds and not colliding with a piece (other than itself)
+		boolean inBounds = theBoard.isPieceInBounds(copy);
+		boolean collision = false;
 		for (int i = 0; i < 4; ++i) {
-			originalPiece[i] = new Point(this.piece[i]);
-			movedPiece[i] = new Point(this.piece[i]);
+			if (theBoard.isSet(copy[i]) && !isPartOfPiece(copy[i].x, copy[i].y)) {
+				collision = true;
+				break;
+			}
 		}
 		
-		//Clear the active piece from the board (to get it out of the way).
-		clearPiece();
-		
-		//Try moving.
-		for (int i = 0; i < 4; ++i)
-			movedPiece[i].add(moveVector);
-		
-		//Check whether the moved piece is colliding with anything or out of bounds.
-		//We don't care if the piece is above the board; only left, right, or below.
-		//(Otherwise, a line sticking above the top of the board wouldn't move.)
-		boolean inBounds = theBoard.isPieceInBoundsLeftRightBottom(movedPiece);
-		boolean pieceCollision = theBoard.checkPieceCollision(movedPiece);
-		boolean moveSuccessful = inBounds && !pieceCollision;
+		boolean moveSuccessful = inBounds && !collision;
 		
 		if (moveSuccessful) {
-			setPiece(movedPiece, this.type);
+			clearPiece();
+			setPiece(copy, this.type);
 			return true;
 		}
-		
-		else {
-			setPiece(originalPiece, this.type);
-			return false;
-		}
-
+		else return false;
 	}
 	
 

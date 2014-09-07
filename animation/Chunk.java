@@ -26,7 +26,7 @@ public class Chunk {
 	 * @param lowerBoundRowIndex - The index of the row of the bottom chunk + 1 in logic space.
 	 * @return Returns a boolean indicating whether the chunk exists.
 	 */
-	public static boolean isEmptyChunk(int upperBoundRowIndex, int lowerBoundRowIndex) {
+	public static boolean isEmptyChunk(int lowerBoundRowIndex, int upperBoundRowIndex) {
 		return !(lowerBoundRowIndex > upperBoundRowIndex);
 	}
 	
@@ -81,38 +81,97 @@ public class Chunk {
 		for (ScreenSpaceSubsquare s : subsquareList) {
 			Point2f screenSpace = s.getPoint();
 			Point logicSpace = GameBoardSquare.screenToBoard(screenSpace.x, screenSpace.y);
-			theBoard.setSquare(logicSpace, s.getColor());
+			theBoard.setSquare(logicSpace.x, logicSpace.y, s.getColor());
 		}
 	}
 	
 	
 	
 	
-	/**
-	 * Creates a chunk on the interval [upperBound, lowerBound). This chunk is guaranteed
-	 * to be sorted, such that the first subsquare is on the highest row of the chunk, and the last 
-	 * subsquare is on the lowest row.
-	 * @param theBoard - The GameBoard containing the chunks.
-	 * @param lowerBound - The bottom-most row index plus 1 of the chunk in logic space.
-	 * @param upperBound - The top-most row index of the chunk in logic space.
-	 * @return If the chunk is empty, returns an empty chunk. Returns a non-empty chunk otherwise.
-	 */
-	public static Chunk createChunkFromBounds(GameBoard theBoard, int lowerBound, int upperBound) {
+//	/**
+//	 * Creates a chunk on the interval [upperBound, lowerBound). This chunk is guaranteed
+//	 * to be sorted, such that the first subsquare is on the highest row of the chunk, and the last 
+//	 * subsquare is on the lowest row. This method also clears the chunk from the board.
+//	 * @param theBoard - The GameBoard containing the chunks.
+//	 * @param lowerBound - The bottom-most row index plus 1 of the chunk in logic space.
+//	 * @param upperBound - The top-most row index of the chunk in logic space.
+//	 * @param clearChunk - We can optionally clear this chunk from the game board while we're
+//	 * acquiring it.
+//	 * @return If the chunk is empty, returns an empty chunk. Returns a non-empty chunk otherwise.
+//	 */
+//	public static Chunk createChunkFromBounds(GameBoard theBoard, int lowerBound, int upperBound, boolean clearChunk) {
+//		if (isEmptyChunk(lowerBound, upperBound))
+//			return new Chunk();
+//		
+//		Chunk chunk = new Chunk();
+//		int numCols = theBoard.getCols();
+//		
+//		//Two versions of the loop for maximum efficiency. This is better than checking the clearChunk
+//		//value for each (i,j) index.
+//		if (clearChunk) {
+//			for (int i = upperBound; i < lowerBound; ++i) {
+//				for (int j = 0; j < numCols; ++j) {
+//					if (theBoard.isSet(i,j)) {
+//						Point p = GameBoardSquare.boardToScreen(i, j);
+//						chunk.addSubsquare(new ScreenSpaceSubsquare(new Point2f(p), theBoard.getSquare(i,j).getColor()));
+//						theBoard.clearSquare(i,j);
+//					}
+//				}
+//			}
+//		}
+//		
+//		else {
+//			for (int i = upperBound; i < lowerBound; ++i) {
+//				for (int j = 0; j < numCols; ++j) {
+//					if (theBoard.isSet(i,j)) {
+//						Point p = GameBoardSquare.boardToScreen(i, j);
+//						chunk.addSubsquare(new ScreenSpaceSubsquare(new Point2f(p), theBoard.getSquare(i,j).getColor()));
+//					}
+//				}
+//			}
+//		}
+//		
+//		return chunk;
+//	}
+	
+	
+	
+	
+	public void createChunkFromBounds(GameBoard theBoard, int lowerBound, int upperBound, boolean clearChunk) {
 		if (isEmptyChunk(lowerBound, upperBound))
-			return new Chunk();
+			return;
 		
-		Chunk chunk = new Chunk();
 		int numCols = theBoard.getCols();
-		for (int i = upperBound; i < lowerBound; ++i) {
-			for (int j = 0; j < numCols; ++j) {
-				if (theBoard.isSet(i,j)) {
-					Point p = GameBoardSquare.boardToScreen(i, j);
-					chunk.addSubsquare(new ScreenSpaceSubsquare(new Point2f(p), theBoard.getSquare(i,j).getColor()));
+		
+		//Two versions of the loop for maximum efficiency. This is better than checking the clearChunk
+		//value for each (i,j) index.
+		if (clearChunk) {
+			for (int i = upperBound; i < lowerBound; ++i) {
+				for (int j = 0; j < numCols; ++j) {
+					if (theBoard.isSet(i,j)) {
+						Point p = GameBoardSquare.boardToScreen(i, j);
+						addSubsquare(new ScreenSpaceSubsquare(new Point2f(p), theBoard.getSquare(i,j).getColor()));
+						theBoard.clearSquare(i,j);
+					}
 				}
 			}
 		}
-		return chunk;
+		
+		else {
+			for (int i = upperBound; i < lowerBound; ++i) {
+				for (int j = 0; j < numCols; ++j) {
+					if (theBoard.isSet(i,j)) {
+						Point p = GameBoardSquare.boardToScreen(i, j);
+						addSubsquare(new ScreenSpaceSubsquare(new Point2f(p), theBoard.getSquare(i,j).getColor()));
+					}
+				}
+			}
+		}
+				
 	}
+	
+	
+	
 	
 	public void moveChunk(float amount) {
 		for (ScreenSpaceSubsquare s : subsquareList) {
