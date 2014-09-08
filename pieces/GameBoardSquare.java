@@ -1,8 +1,9 @@
 package pieces;
 
-import org.newdawn.slick.Color;
+//import org.newdawn.slick.Color;
 //import org.newdawn.slick.GameContainer;
 import org.newdawn.slick.Graphics;
+import org.newdawn.slick.Image;
 
 import point.Point;
 import tetrisgame.TetrisGame;
@@ -11,7 +12,8 @@ import tetrisgame.TetrisGame;
 public class GameBoardSquare {
 	
 	private boolean isSet;
-	private Color color;
+	private Image color;
+	//private Color color;
 	
 	
 	public enum MoveType {  //type of movement
@@ -19,13 +21,13 @@ public class GameBoardSquare {
 		MOVE_RIGHT,
 		MOVE_LEFT
 	}
+	
 	public GameBoardSquare() {
 		isSet = false;
-		color      = Color.white;
+		this.color = null;
 	}
 	
-	
-	public GameBoardSquare(Color color) {
+	public GameBoardSquare(Image color) {
 		this.color = color;
 		isSet = true;
 	}
@@ -36,12 +38,12 @@ public class GameBoardSquare {
 	}
 
 	
-	public Color getColor() {
+	public Image getColor() {
 		return color;
 	}
 
 	
-	public void setColor(Color color) {
+	public void setColor(Image color) {
 		this.color = color;
 	}
 	
@@ -55,7 +57,7 @@ public class GameBoardSquare {
 	 * the game is over.
 	 */
 	
-	public boolean setSquare(Color color) {
+	public boolean setSquare(Image color) {
 		if (isSet)
 			return false;
 		else {
@@ -68,6 +70,7 @@ public class GameBoardSquare {
 	
 	public void clearSquare() {
 		isSet = false;
+		//color = null;
 	}
 	
 	
@@ -101,10 +104,10 @@ public class GameBoardSquare {
 			return;
 		
 		if (isSet) {
-			g.setColor(color);
-			int size = TetrisGame.pieceSize;
+			//g.setColor(this.color);
 			Point p  = boardToScreen(row, col);
-			g.fillRect(p.x, p.y, size, size);
+			//g.fillRect(p.x, p.y, size, size);
+			g.drawImage(this.color, p.x, p.y);
 		}
 	}
 }

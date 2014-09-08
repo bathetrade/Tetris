@@ -219,8 +219,10 @@ public class Chunk {
 	
 	public void render(Graphics graphics) {
 		for (ScreenSpaceSubsquare s : subsquareList) {
-			graphics.setColor(s.getColor());
-			graphics.fillRect(s.getPoint().x, s.getPoint().y, TetrisGame.pieceSize, TetrisGame.pieceSize);
+			//graphics.setColor(s.getColor());
+			//graphics.fillRect(s.getPoint().x, s.getPoint().y, TetrisGame.pieceSize, TetrisGame.pieceSize);
+			Point2f p = s.getPoint();
+			graphics.drawImage(s.getColor(), p.x, p.y);
 		}
 	}
 }

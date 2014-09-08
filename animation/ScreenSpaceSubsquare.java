@@ -1,16 +1,17 @@
 package animation;
 import point.Point2f;
-import org.newdawn.slick.Color;
+import org.newdawn.slick.Image;
+
 public class ScreenSpaceSubsquare {
 	private Point2f subsquare;
-	private Color color;
+	private Image color;
 	
-	public ScreenSpaceSubsquare(Point2f subsquare, Color color) {
+	public ScreenSpaceSubsquare(Point2f subsquare, Image color) {
 		this.subsquare = subsquare;
 		this.color     = color;
 	}
 	
-	public void set(Point2f subsquare, Color color) {
+	public void set(Point2f subsquare, Image color) {
 		this.subsquare = subsquare;
 		this.color = color;
 	}
@@ -19,7 +20,7 @@ public class ScreenSpaceSubsquare {
 		return subsquare;
 	}
 	
-	public Color getColor() {
+	public Image getColor() {
 		return color;
 	}
 	

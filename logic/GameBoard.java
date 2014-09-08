@@ -2,12 +2,11 @@ package logic;
 
 import java.util.Random;
 
-import org.newdawn.slick.Color;
 import org.newdawn.slick.GameContainer;
 import org.newdawn.slick.Graphics;
+import org.newdawn.slick.Image;
 
 import animation.RowDeleteAnimation;
-
 import pieces.ActivePiece;
 import pieces.GameBoardSquare;
 import point.*;
@@ -318,13 +317,13 @@ public class GameBoard {
 	
 	
 	
-	public boolean setSquare(int row, int col, Color color) {
+	public boolean setSquare(int row, int col, Image color) {
 		return !inBounds(row,col) ? false : gameBoard[row][col].setSquare(color);
 	}
 	
 	
 	
-	public boolean setSquare(Point p, Color color) {
+	public boolean setSquare(Point p, Image color) {
 		return !inBounds(p.x, p.y) ? false : gameBoard[p.x][p.y].setSquare(color);
 	}
 	
@@ -359,15 +358,14 @@ public class GameBoard {
 		int hw = cols/2;  //Half of the board's width.
 		
 		//PieceType type = PieceType.PIECE_LINE;
-		PieceType type = PieceType.fromInteger(RNG.nextInt(PieceType.numPieces));
+		//PieceType type = PieceType.fromInteger(RNG.nextInt(PieceType.numPieces));
 		
 		randomNum ^= randomNum << 22;
 		randomNum ^= randomNum >>> 35;
 		randomNum ^= randomNum << 4;
-		System.out.println(randomNum);
 		if (randomNum < 0)
 			randomNum *= -1;
-		type = PieceType.fromInteger((int)(randomNum % PieceType.numPieces));
+		PieceType type = PieceType.fromInteger((int)(randomNum % PieceType.numPieces));
 		
 		//Pieces are specified in logic space. Example of a line:
 		//0 0 0 0 0 0 ....

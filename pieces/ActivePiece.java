@@ -4,7 +4,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
-import org.newdawn.slick.Color;
+import org.newdawn.slick.Image;
 
 import point.*;
 import pieces.GameBoardSquare.MoveType;
@@ -12,6 +12,7 @@ import logic.GameBoard;
 import logic.GameBoard.PieceType;
 import logic.SubsquareCollision;
 import logic.SubsquareCollisionList;
+import manager.ImageManager;
 
 public class ActivePiece {
 	
@@ -19,7 +20,7 @@ public class ActivePiece {
 	//Or, at least used collections instead of naked arrays.
 	private Point[] piece;
 	private GameBoard theBoard;
-	private Color color;
+	private Image color;
 	private PieceType type;
 	public enum CollisionType {
 		COL_NONE,
@@ -231,7 +232,7 @@ public class ActivePiece {
 		piece         = new Point[4];
 		for (int i=0; i<4; ++i)
 			piece[i] = new Point();
-		this.color   = new Color(Color.white);
+		this.color   = null;
 	}
 	
 	
@@ -252,39 +253,38 @@ public class ActivePiece {
 	 */
 	public boolean setPiece(Point[] piece, PieceType type) {
 		
-		switch (type) {
-		case PIECE_L:
-			this.color = Color.blue;
-			break;
-		case PIECE_J:
-			this.color = Color.yellow;
-			break;
-		case PIECE_S:
-			this.color = Color.green;
-			break;
-		case PIECE_Z:
-			this.color = Color.red;
-			break;
-		case PIECE_T:
-			this.color = Color.magenta;
-			break;
-		case PIECE_SQUARE:
-			this.color = Color.orange;
-			break;
-		case PIECE_LINE:
-			this.color = Color.pink;
-			break;
-		default:
-			this.color = Color.white;
-			break;
-		}
+//		switch (type) {
+//		case PIECE_L:
+//			this.color = Color.blue;
+//			break;
+//		case PIECE_J:
+//			this.color = Color.yellow;
+//			break;
+//		case PIECE_S:
+//			this.color = Color.green;
+//			break;
+//		case PIECE_Z:
+//			this.color = Color.red;
+//			break;
+//		case PIECE_T:
+//			this.color = Color.magenta;
+//			break;
+//		case PIECE_SQUARE:
+//			this.color = Color.orange;
+//			break;
+//		case PIECE_LINE:
+//			this.color = Color.pink;
+//			break;
+//		default:
+//			this.color = Color.white;
+//			break;
+//		}
+		this.color = ImageManager.getImage(type);
 		this.type = type;
 		
-		//This is the source of the bug that causes mayhem when pieces are rotated above the board.
 		boolean pieceInBounds = true;
 		for (int i=0; i<4; ++i) {
 			if (!theBoard.setSquare(piece[i].x, piece[i].y, this.color))
-				//return false;
 				pieceInBounds = false;
 		}
 		

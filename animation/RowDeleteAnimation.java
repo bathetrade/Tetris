@@ -195,13 +195,15 @@ public class RowDeleteAnimation {
 			//to keep track of the initial heights of each and every subsquare, which would also
 			//require us to recalculate height for every subsquare, each frame. Instead, we just
 			//calculate the change in height each frame once, and apply it to all subsquares.
-//			double t           = Timer.nanoToSeconds(animationTimer.getElapsedTime());
-//			double dt          = Timer.nanoToSeconds(animationTimer.getDeltaTime());
-//			double velocity    = 285d * t;
-//			double deltaHeight = velocity * dt;
-			testTime += testdt;
-			double velocity = 285d * testTime;
-			double deltaHeight = velocity * testdt;
+			double t           = Timer.nanoToSeconds(animationTimer.getElapsedTime());
+			double dt          = Timer.nanoToSeconds(animationTimer.getDeltaTime());
+			double velocity    = 1200d * t;
+			double deltaHeight = velocity * dt;
+			
+			//debug
+//			testTime += testdt;
+//			double velocity = 285d * testTime;
+//			double deltaHeight = velocity * testdt;
 			
 			//If the chunk goes under the collision line, stop the chunk, update the collision line,
 			//and pop the chunk off the stack.
