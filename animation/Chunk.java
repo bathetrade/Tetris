@@ -61,7 +61,7 @@ public class Chunk {
 		if (subsquareList.isEmpty())
 			return -1;
 		
-		return subsquareList.peekFirst().getPoint().y;
+		return subsquareList.peekFirst().getPoint().y + TetrisGame.pieceSize;
 	}
 	
 	
@@ -176,8 +176,6 @@ public class Chunk {
 	public void moveChunk(float amount) {
 		for (ScreenSpaceSubsquare s : subsquareList) {
 			s.getPoint().add(0, amount);
-			//topChunkScreenSpaceY += amount;
-			//bottomChunkScreenSpaceY += amount;
 		}
 	}
 	
