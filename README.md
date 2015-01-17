@@ -9,7 +9,7 @@ This is my implementation of Tetris using Java and the Slick2D library. At this 
 Playing the game
 ----------------
 
-If you would like to play the game, just clone the project somewhere on your computer and go into the bin/Tetris folder. If you don't want to clone the whole project, you can download just the game folder from [here](https://drive.google.com/folderview?id=0B7xueVZRJEYhY3c2cDR3Mm5FdkE&usp=sharing). Go to the Tetris directory on your computer, and then click on "tetris.jar" and it *should* run on Windows 32-bit and 64-bit. It also runs on Linux of course, but I took out the Linux .so libraries for the time being to decrease the size of download (temporary).
+If you would like to play the game, just clone the project somewhere on your computer and go into the bin/Tetris folder. If you don't want to clone the whole project, you can download a zipped version of just the game folder from [here](http://www.filedropper.com/tetris_1). Go to the Tetris directory on your computer, and then click on "tetris.jar" and it *should* run on Windows 32-bit and 64-bit. It also runs on Linux of course, but I took out the Linux .so libraries for the time being to decrease the size of download (temporary).
 
 Purpose of the project
 ----------------------
