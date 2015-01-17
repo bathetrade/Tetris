@@ -9,6 +9,8 @@ public class AppMain {
 	
 	public static void main(String[] args) {
 		TetrisGame game = new TetrisGame("Tetris");
+
+		
 		try {
 			AppGameContainer app = new AppGameContainer(game, TetrisGame.windowWidth, TetrisGame.windowHeight, false);
 			app.start();

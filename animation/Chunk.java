@@ -192,6 +192,9 @@ public class Chunk {
 	 * @return Returns true if the method successfully aligns the chunks, and false otherwise (it
 	 * should never return false; this is just here for debugging).
 	 */
+	//Update: not using this method. Instead, if updating the chunk would put it below the collision line, then
+	//we simply update by the exact amount needed to align it with the line. This is cleaner.
+	
 	public boolean align() {
 		
 		//Really simplistic rounding. Might cause a problem if the computer stutters enough to

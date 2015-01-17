@@ -16,8 +16,6 @@ import manager.ImageManager;
 
 public class ActivePiece {
 	
-	//Maybe have an array of GameBoardSquare? Makes more sense...
-	//Or, at least used collections instead of naked arrays.
 	private Point[] piece;
 	private GameBoard theBoard;
 	private Image color;
@@ -163,7 +161,7 @@ public class ActivePiece {
 		//of the piece, then we take "unique" to mean collisions with a unique column
 		//index. In this case, unique entries would be either {(1,5), (2,4)} or 
 		//{(2,5), (2,4)}, and the number of unique entries would be 2. This is 
-		//the magnitude of the kick amount. (*sigh*)
+		//the magnitude of the kick amount.
 		List<SubsquareCollision> collisionList = subsquareCollisionList.getList();
 		int listSize = collisionList.size();
 		if (listSize == 0) {
@@ -315,9 +313,6 @@ public class ActivePiece {
 	 */
 	public boolean move(MoveType type, int numUnits) {
 		
-//		//Necessary to prevent animation bug that happens one frame after the end of the animation
-//		if (hasLanded)
-//			return false;
 		
 		Vec2D moveVector = new Vec2D();
 		switch (type) {

@@ -169,14 +169,29 @@ public class TetrisGame extends BasicGame {
 			
 			
 			//Dvorak configuration; for Qwerty, change to z and x respectively.  
-			else if (input.isKeyDown(Input.KEY_SEMICOLON)) {
+//			else if (input.isKeyDown(Input.KEY_SEMICOLON)) {
+//				if (!isKeyDown) {
+//					theBoard.getActivePiece().rotate(true);
+//					isKeyDown = true;
+//				}
+//			}
+//			
+//			else if (input.isKeyDown(Input.KEY_Q)) {
+//				if (!isKeyDown) {
+//					theBoard.getActivePiece().rotate(false);
+//					isKeyDown = true;
+//				}
+//			}
+			
+			//Qwerty configuration
+			else if (input.isKeyDown(Input.KEY_Z)) {
 				if (!isKeyDown) {
 					theBoard.getActivePiece().rotate(true);
 					isKeyDown = true;
 				}
 			}
 			
-			else if (input.isKeyDown(Input.KEY_Q)) {
+			else if (input.isKeyDown(Input.KEY_X)) {
 				if (!isKeyDown) {
 					theBoard.getActivePiece().rotate(false);
 					isKeyDown = true;

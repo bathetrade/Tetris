@@ -78,7 +78,7 @@ public class GameBoard {
 		RNG 		          = new Random();
 		randomNum             = RNG.nextLong();
 		
-		//Animation stuff
+		//Animation stuff (todo: find a cleaner way to toggle the animation state)
 		animateRowDelete      = new RowDeleteAnimation(this);
 		animateRowDeleteFlag  = false;
 		
@@ -360,6 +360,7 @@ public class GameBoard {
 		//PieceType type = PieceType.PIECE_LINE;
 		//PieceType type = PieceType.fromInteger(RNG.nextInt(PieceType.numPieces));
 		
+		//Playing around with random numbers. Default random class is spawning too many duplicate pieces.
 		randomNum ^= randomNum << 22;
 		randomNum ^= randomNum >>> 35;
 		randomNum ^= randomNum << 4;
@@ -416,8 +417,7 @@ public class GameBoard {
 	}
 	
 	
-	
-	
+
 	public void render(GameContainer container, Graphics g) {
 		
 		

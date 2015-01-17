@@ -60,7 +60,13 @@ public class SubsquareCollisionList {
 	
 	
 	
-	
+	/**
+	 * Get the subsquare in the collision list which is the "farthest" out in the direction of collision.
+	 * For example, if the active piece collides with other pieces after a left rotate (counter-clockwise), then
+	 * the collision type is COL_LEFT and the most outstanding subsquare would be the farthest one to the left.
+	 * This method is used to determine how much to "kick" a piece back in after a collision.
+	 * @return
+	 */
 	public Point getMostOutstandingSubsquare() {
 		if (!sameType)
 			return new Point(-1,-1);
